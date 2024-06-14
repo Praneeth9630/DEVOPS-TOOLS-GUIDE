@@ -1,0 +1,3866 @@
+----------------------------------
+KUBERNETES->
+----------------------------------
+
+1)EKS installation and Services
+2)Ingress
+3) HPA, pull from ECR and Docker registery and RBAC
+4)Schedulers
+5)DEPLOYMENT STRATEGIES
+6)RDS, DB and Statefulset
+7)volumes -PV(PERSISTENCE VOLUME)  PVC(PERSISTENCE VOLUME CLAIM)  Storageclass
+8)Monitering with Grafana and prometheus
+9)Helm charts
+10)Argo CD
+11)headless-service
+12)Sonar-qube with jenkins
+13)Jfrog using Jenkins
+14)ELK AND EFK Stack 
+
+#########################################################-------------- Kubernetes--------------######################################################################
+Kubernetes is a container orchestration system that was initially designed by Google to help scale
+containerized applications in the cloud. Kubernetes can manage the lifecycle of containers, creating and
+destroying them depending on the needs of the application, as well as providing a host of other features.
+Kubernetes has become one of the most discussed concepts in cloud-based application development,
+and the rise of Kubernetes signals a shift in the way that applications are developed and deployed.
+In general, Kubernetes is formed by a cluster of servers, called Nodes, each running Kubernetes agent
+processes and communicating with one another. The Master Node contains a collection of processes
+called the control plane that helps enact and maintain the desired state of the Kubernetes cluster, while
+Worker Nodes are responsible for running the containers that form your applications and services.
+
+
+###########################################################################################################################################################################################
+                                                                            ----- Kubernetes DAY-1 ------- 
+###########################################################################################################################################################################################
+
+## A Kubernetes cluster is composed of two separate planes:
+
+Kubernetes control plane—manages Kubernetes clusters and the workloads running on them. Include components like the API Server, Scheduler, and Controller Manager.
+Kubernetes Workernode that can run containerized workloads. Each node is managed by the kubelet, an agent that receives commands from the control plane. --
+
+==============================================================
+## Master Node or Control Node compomnents  ##
+
+
+## API Server -------
+Provides an API that serves as the front end of a Kubernetes control plane. It is responsible for handling external and internal requests—determining whether a request is valid and then processing it. The API can be accessed via the kubectl command-line interface or other tools like kubeadm, and via REST calls.
+
+## Scheduler :------ 
+This component is responsible for scheduling pods on specific nodes according to automated workflows and user defined conditions, which can include resource requests
+
+## etcd :-----
+A key-value database that contains data about your cluster state and configuration. Etcd is fault tolerant and distributed.
+
+## Controller:-----
+It receives information about the current state of the cluster and objects within it, and sends instructions to move the cluster towards the cluster operator’s desired state. 
+
+====================================================================
+## Worker Node Components ##
+
+## kubelet: ----
+Each node contains a kubelet, which is a small application that can communicate with the Kubernetes control plane. The kubelet is responsible for ensuring that containers specified in pod configuration are running on a specific node, and manages their lifecycle.. It executes the actions commanded by your control plane
+
+## Kube Proxy :---
+All compute nodes contain kube-proxy, a network proxy that facilitates Kubernetes networking services. It handles all network communications outside and inside the cluster, forwarding traffic or replying on the packet filtering layer of the operating system.
+
+## Container Runtime Engine :---
+Each node comes with a container runtime engine, which is responsible for running containers. Docker is a popular container runtime engine, but Kubernetes supports other runtimes that are compliant with Open Container Initiative, including CRI-O and rkt.
+
+===============================================================================
+##  CORE COmponents ##
+
+#Nodes: ----
+Nodes are physical or virtual machines that can run pods as part of a Kubernetes cluster. A cluster can scale up to 5000 nodes. To scale a cluster’s capacity, you can add more nodes.
+
+#POD:--------
+
+Pods—pods are the smallest unit provided by Kubernetes to manage containerized workloads.  A pod typically includes several containers, which together form a functional unit or microservice.
+
+======================================================================================
+What is Minikube?
+Minikube is a tool that sets up a Kubernetes environment on a local PC or laptop
+minikube quickly sets up a local Kubernetes cluster on macOS, Linux, and Windows. We proudly focus on helping application developers and new Kubernetes users.
+
+###########################################################################################################################################################################################
+
+
+                                                             ------------- Kubernetes Practice-1 -------(Completed)
+                                                                 -------eks installation and Services-------
+
+
+###########################################################################################################################################################################################
+
+-------------------------------------------------------------------------------------
+# EKS cluster Setup Process 
+
+  # Create an IAM Role and attache it to EC2 instance    
+   `Note: create IAM user with programmatic access if your bootstrap system is outside of AWS`   
+   IAM user should have access to   
+   IAM   
+   EC2   
+   VPC    
+   CloudFormation
+
+  # Create your cluster and nodes 
+   ```sh
+   eksctl create cluster --name cluster-name  \
+   --region region-name \
+   --node-type instance-type \
+   --nodes-min 2 \
+   --nodes-max 2 \ 
+   --zones <AZ-1>,<AZ-2>
+   
+   example:
+   eksctl create cluster --name headless \
+      --region ap-south-1 \
+   --node-type t2.small \
+
+# after create cluster to update it
+ aws eks update-kubeconfig --region <region> --name <cluster name>
+
+ ex: aws eks update-kubeconfig --region ap-south-1 --name surya
+
+ # To delete the EKS clsuter 
+    
+   eksctl delete cluster naresh --region ap-south-1
+
+-------------------------------------------------------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name suryapraneeth5   --region us-east-1   --node-type t2.micro
+-->vi file1.yaml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-svc
+  labels:
+    app: my-app
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: my-app
+
+-->kubectl apply -f file1.yaml
+-->kubectl get pods
+   -->NAME                             READY   STATUS    RESTARTS   AGE
+      my-deployment-6d7f988cdc-86prs   1/1     Running   0          2m49s
+      my-deployment-6d7f988cdc-mlmq4   1/1     Running   0          2m49s
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+      kubernetes   ClusterIP   10.100.0.1      <none>        443/TCP        11m
+      my-app-svc   NodePort    10.100.94.181   <none>        80:30424/TCP   21s
+-->kubectl get nodes -o wide
+   -->NAME                             STATUS   ROLES    AGE     VERSION               INTERNAL-IP      EXTERNAL-IP     OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-15-14.ec2.internal    Ready    <none>   3m36s   v1.29.0-eks-5e0fdde   192.168.15.14    52.90.235.248   Amazon Linux 2   5.10.210-201.852.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-42-160.ec2.internal   Ready    <none>   3m33s   v1.29.0-eks-5e0fdde   192.168.42.160   44.200.78.55    Amazon Linux 2   5.10.210-201.852.amzn2.x86_64   containerd://1.7.11
+-->We can access the appliication by giving 44.200.78.55:30424 and also configure SG in node instance.
+-->vi file1.yaml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-svc
+  labels:
+    app: my-app
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: my-app
+
+-->kubectl apply -f file1.yaml
+-->kubectl get svc
+   -->NAME         TYPE           CLUSTER-IP      EXTERNAL-IP                                                              PORT(S)        AGE
+      kubernetes   ClusterIP      10.100.0.1      <none>                                                                   443/TCP        28m
+      my-app-svc   LoadBalancer   10.100.94.181   a0301d6bcfd0d49f591a1efa0029bd11-278602323.us-east-1.elb.amazonaws.com   80:30424/TCP   17m
+-->We can access the appliication in google by giving a0301d6bcfd0d49f591a1efa0029bd11-278602323.us-east-1.elb.amazonaws.com
+-->kubectl get deployment
+   -->NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+      my-deployment   2/2     2            2           22m
+-->kubectl delete deployment my-deployment
+-->kubectl get svc
+   -->NAME         TYPE           CLUSTER-IP      EXTERNAL-IP                                                              PORT(S)        AGE
+      kubernetes   ClusterIP      10.100.0.1      <none>                                                                   443/TCP        34m
+      my-app-svc   LoadBalancer   10.100.94.181   a0301d6bcfd0d49f591a1efa0029bd11-278602323.us-east-1.elb.amazonaws.com   80:30424/TCP   23m
+-->kubectl delete svc my-app-svc
+-->eksctl delete cluster suryapraneeth5  --region us-east-1
+
+
+###########################################################################################################################################################################################
+
+                                                                     ----- Kubernetes Practice-2 -------(Completed)
+                                                                          ------Ingress------
+
+###########################################################################################################################################################################################
+
+---------------------------------------------------Ingress------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name surya  --region us-east-1   --node-type t2.small
+
+-->kubectl create namespace ingress-nginx
+-->kubectl get ns
+   -->NAME              STATUS   AGE
+      default           Active   6m5s
+      ingress-nginx     Active   4m52s
+      kube-node-lease   Active   6m5s
+      kube-public       Active   6m5s
+      kube-system       Active   6m5s
+-->kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.2.1/deploy/static/provider/cloud/deploy.yaml
+-->kubectl get pods
+   -->No resources found in default namespace
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+      kubernetes   ClusterIP   10.100.0.1   <none>        443/TCP   12m
+-->kubectl get pods -n ingress-nginx
+   -->NAME                                        READY   STATUS      RESTARTS   AGE
+      ingress-nginx-admission-create-s2plg        0/1     Completed   0          70s
+      ingress-nginx-admission-patch-nl2qb         0/1     Completed   0          70s
+      ingress-nginx-controller-57546d469f-7ldcr   1/1     Running     0          70s
+-->kubectl get svc -n ingress-nginx
+   -->NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                      AGE
+      ingress-nginx-controller             LoadBalancer   10.100.141.133   a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com   80:31353/TCP,443:31466/TCP   3m40s
+      ingress-nginx-controller-admission   ClusterIP      10.100.47.163    <none>                                                                   443/TCP                      3m40s
+-->git clone https://github.com/Praneeth9630/Kubernetes.git
+-->ls
+   -->Kubernetes  
+-->cd Kubernetes
+-->ls
+   -->day-1-installations                          day-14-argocd                 day-4-horizonalScaling      day-7-deployment-updates-recreate-rolling-bluegreen-canary
+      day-10-volumes                               day-15-headless-service       day-5-ingress               day-8-worksapce
+      day-12-kube-project-includes-config-secrets  day-2-workernodes_components  day-6-Rbac                  day-9-schedules
+      day-13-helm                                  day-3-services                day-6-private-registry-ecr  daya-11-monitoring
+-->cd day-5-ingress
+-->ls
+   -->ingress_service.yaml  path-1.yaml  path-2.yaml
+-->kubectl apply -f .
+   -->ingress.networking.k8s.io/k8s-ingress created
+      deployment.apps/nginx created
+      service/nginx created
+      deployment.apps/httpd created
+      service/httpd created
+-->kubectl get pods
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      httpd-75cc4856f5-lmfng   1/1     Running   0          12s
+      nginx-7c5ddbdf54-g888g   1/1     Running   0          12s
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+      httpd        ClusterIP   10.100.181.166   <none>        80/TCP    51s
+      kubernetes   ClusterIP   10.100.0.1       <none>        443/TCP   19m
+      nginx        ClusterIP   10.100.254.193   <none>        80/TCP    51s
+-->kubectl get ingress
+   -->NAME          CLASS   HOSTS   ADDRESS                                                                  PORTS   AGE
+      k8s-ingress   nginx   *       a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com   80      84s
+-->if you give aa2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com in google it shows it works as default we kept httpd
+-->if you give https://a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com/nginx it shows nginx webpage
+-->if you give https://a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com/httpd it shows it works
+-->vi ingress_service.yaml
+   -->
+#https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.2.1/deploy/static/provider/cloud/deploy.yaml -install ingress contr
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k8s-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /nginx(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+      - path: /httpd(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: httpd
+            port:
+              number: 80
+   -->here we changed the path of httpd to nginx
+-->kubectl apply -f .
+   -->ingress.networking.k8s.io/k8s-ingress configured
+      deployment.apps/nginx unchanged
+      service/nginx unchanged
+      deployment.apps/httpd unchanged
+      service/httpd unchanged
+-->Now when we type a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com we get to access httpd by default
+-->Now when we type a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com/nginx we get to access nginx
+-->Now when we type a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com/httpd we get to access nginx
+-->vi ingress_service.yaml
+   -->
+#https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.2.1/deploy/static/provider/cloud/deploy.yaml -install ingress contr
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k8s-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /nginx(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+      - path: /httpd(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: httpd
+            port:
+              number: 80
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+   -->here we changed the path of httpd to httpd and default path to nginx
+-->kubectl apply -f .
+   -->ingress.networking.k8s.io/k8s-ingress configured
+      deployment.apps/nginx unchanged
+      service/nginx unchanged
+      deployment.apps/httpd unchanged
+      service/httpd unchanged
+
+-->Now when we type a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com we get to access nginx by default
+-->Now when we type a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com/nginx we get to access nginx webpage
+-->Now when we type a2126587d4b0a4d9ba4627d206061199-905768891.us-east-1.elb.amazonaws.com/httpd we get to access httpd webpage
+
+-->eksctl delete cluster surya  --region us-east-1
+
+
+###########################################################################################################################################################################################
+
+                                                                --------------- Kubernetes Practice-3 ---------------(config profile not found error at aws eks update-kubeconfig) 
+
+                                                                 ----- HPA, pull from ECR and Docker registery and RBAC ------
+
+###########################################################################################################################################################################################
+--------------------------------------------------- HPA, pull from ECR and Docker registery and RBAC ------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name surya   --region us-east-1   --node-type t2.small
+
+-->ls
+   -->Kubernetes  
+-->cd Kubernetes
+-->cd day-4-horizonalScaling
+-->ls
+   -->deployment.yaml  hpa.yaml  service.yml  test.sh
+-->kubectl apply -f deployment.yaml
+-->kubectl get pods
+   -->NAME                         READY   STATUS    RESTARTS   AGE
+      nginx-hpa-555466f66b-qljr7   1/1     Running   0          13s
+-->kubectl apply -f service.yml
+-->kubectl get svc
+   -->NAME         TYPE           CLUSTER-IP      EXTERNAL-IP                                                               PORT(S)        AGE
+      kubernetes   ClusterIP      10.100.0.1      <none>                                                                    443/TCP        19m
+      my-app-lb    LoadBalancer   10.100.111.70   aea3d9e120e984e27a78f0643aadc8cb-1058920436.us-east-1.elb.amazonaws.com   80:32485/TCP   10s
+-->kubectl get pods -o wide
+   -->NAME                         READY   STATUS    RESTARTS   AGE     IP               NODE                            NOMINATED NODE   READINESS GATES
+      nginx-hpa-555466f66b-qljr7   1/1     Running   0          4m52s   192.168.45.114   ip-192-168-49-98.ec2.internal   <none>           <none>
+
+-->vi service.yml
+   -->
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-lb
+  labels:
+    app: my-app-lb
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: nginx
+
+    -->change from load balancer to NodePort
+
+-->kubectl apply -f service.yml
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+      kubernetes   ClusterIP   10.100.0.1      <none>        443/TCP        25m
+      my-app-lb    NodePort    10.100.111.70   <none>        80:32485/TCP   6m7s
+-->kubectl get nodes -o wide
+   -->NAME                            STATUS   ROLES    AGE   VERSION               INTERNAL-IP     EXTERNAL-IP     OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-49-98.ec2.internal   Ready    <none>   18m   v1.29.0-eks-5e0fdde   192.168.49.98   54.81.252.114   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-8-46.ec2.internal    Ready    <none>   18m   v1.29.0-eks-5e0fdde   192.168.8.46    54.147.84.111   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+-->Here we access the application by giving <Node_IP>:portno( 54.81.252.114:32485), remember to configure SG 
+-->kubectl apply -f hpa.yaml
+   -->horizontalpodautoscaler.autoscaling/nginx created
+-->kubectl top pods
+   -->error: Metrics API not available
+   -->as we have not installed metrics it is showing us like that so we have to install metrics
+-->kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+-->kubectl get deployment metrics-server -n kube-system
+   -->NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+      metrics-server   0/1     1            0           12s
+-->kubectl top pods
+   -->NAME                         CPU(cores)   MEMORY(bytes)   
+      nginx-hpa-555466f66b-qljr7   0m           1Mi
+-->vi test.sh
+   -->for i in {1..10000}; do curl -s -o /dev/null -w "%{http_code}\n" http://a7c379f5aeb6f4925b747f01639dfdbb-1610325340.ap-south-1.elb.amazonaws.com/; done
+   -->change the loadbalancer to ip
+   -->for i in {1..1000}; do curl -s -o /dev/null -w "%{http_code}\n" http://54.81.252.114:32485/; done
+-->sh test.sh
+   -->200
+      200
+      200
+      200
+      200
+      200
+      200
+-->kubectl top pods
+   -->NAME                         CPU(cores)   MEMORY(bytes)   
+      nginx-hpa-555466f66b-qljr7   8m           1Mi
+-->Now if we check the no of pods it will increase as even though we kept in replicas 1 itself but in horizontal scaling we kept 10
+-->kubectl get pods
+   -->NAME                         READY   STATUS    RESTARTS   AGE
+      nginx-hpa-555466f66b-dfn48   1/1     Running   0          10s
+      nginx-hpa-555466f66b-jdcmt   1/1     Running   0          10s
+      nginx-hpa-555466f66b-qljr7   1/1     Running   0          13m
+-->kubectl get replicaset
+   -->NAME                   DESIRED   CURRENT   READY   AGE
+      nginx-hpa-555466f66b   3         3         3       13m
+-->kubectl top pods
+   -->NAME                         CPU(cores)   MEMORY(bytes)   
+      nginx-hpa-555466f66b-dfn48   0m           1Mi             
+      nginx-hpa-555466f66b-jdcmt   0m           1Mi             
+      nginx-hpa-555466f66b-qljr7   0m           1Mi 
+
+
+###Pull from Docker registery and AWS ECR
+
+-->mkdir private
+-->cd private
+-->docker login
+   -->username:praneeth9630
+      password:Praneeth@9630
+-->vi private.yml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: docker-registery-image
+spec:
+  containers:
+  - name: private-reg-container
+    image: praneeth9630/maventomcat
+
+-->kubectl apply -f private.yml
+-->kubectl get pods
+   -->NAME                         READY   STATUS    RESTARTS   AGE
+      docker-registery-image       1/1     Running   0          13s
+      nginx-hpa-555466f66b-dfn48   1/1     Running   0          3m23s
+      nginx-hpa-555466f66b-jdcmt   1/1     Running   0          3m23s
+      nginx-hpa-555466f66b-qljr7   1/1     Running   0          16m
+-->In private.yml you can change the image to arn of a image in AWS ECR to create a pod from image in AWS ECR
+
+
+######  RBAC  #######
+
+step-1 user need to create and generate keys 
+
+step-2 create kuberenetes Role 
+
+step-3 cretae kuberentes role binding to bind role and group
+
+step-4 add usr arn into config map file
+
+-->First create an iam user with administrator access with access key and secret key
+-->access key : AKIAXMV4BKEC4QQPWYDU
+   secret key : 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
+-->cd ..
+-->mkdir role
+-->cd role
+-->vi role.yaml
+   -->
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: developer-role
+rules:
+  - apiGroups: [""] # "" indicates the core API group ["apps"]
+    resources: ["ConfigMap"]
+    verbs: ["get", "list"]
+  - apiGroups: [""] # "" indicates the core API group ["apps"]
+    resources: ["pods"]
+    verbs: ["get", "list",]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+
+-->kubectl apply -f role.yaml
+-->Now we need to bind this role to map role and group
+-->vi rb.yaml
+   -->
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: default
+subjects:
+  - kind: Group
+    name: "developer"
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: developer-role
+  apiGroup: rbac.authorization.k8s.io
+
+-->kubectl apply -f rb.yml
+-->kubectl get rolebinding
+   -->NAME        ROLE                  AGE
+      read-pods   Role/developer-role   12s
+
+-->What is aws-auth config?
+   -->When ever create a EKS cluster one role will create , the role is mapped to kubernetes cluster by default it is accessable for all pods delete and create
+   -->Now here we need to add a role
+
+-->kubectl edit cm aws-auth -n kube-system
+   -->
+apiVersion: v1
+data:
+  mapRoles: |
+    - groups:
+      - system:bootstrappers
+      - system:nodes
+      rolearn: arn:aws:iam::992382358200:role/eksctl-naresh-nodegroup-ng-bbb93ed-NodeInstanceRole-9GWNpfucPXRt
+      username: system:node:{{EC2PrivateDNSName}}
+  mapUsers: |
+    - userarn: arn:aws:iam::992382358200:user/eks
+      username: eks
+      groups:
+      - developer
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2024-03-22T02:22:59Z"
+  name: aws-auth
+  namespace: kube-system
+  resourceVersion: "344678"
+  uid: 8167447c-eb81-4108-8653-690369d98c4f
+
+
+-->aws configure
+   -->access key : AKIAXMV4BKEC4QQPWYDU
+      secret key : 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
+-->aws eks update-kubeconfig --name naresh --profile IAMuser
+-->kubectl delete pod <pod_name>
+   -->we are unable to delete the pod
+
+-->eksctl delete cluster surya  --region us-east-1
+
+
+
+###########################################################################################################################################################################################
+
+                                                                            ----- Kubernetes Practice-4 -------(Completed)
+
+                                                                                   ----Schedulers----
+
+###########################################################################################################################################################################################
+---------------------------------------------------Schedulers-------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------
+1.Nodeselector 
+
+NodeSelector is the simplest recommended form of node selection constraint. You can add the nodeSelector field to your Pod specification and specify the node labels you want the target node to have. Kubernetes only schedules the Pod onto nodes that have each of the labels you specify.
+
+# to label the node 
+kubectl label nodes <node-name> <label-key>=<label-value>
+
+Example: 
+
+kubectl label nodes ip-192-168-43-22.ap-south-1.compute.internal size=large
+
+# to unlabel
+kubectl label nodes <node-name> <label-key>=<label-value>-
+kubectl label nodes ip-192-168-43-22.ap-south-1.compute.internal size-
+kubectl label nodes --all size-  #to unlabel nodes
+
+# to list 
+kubectl get nodes --show-labels
+
+--------------------------------------------------------------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name surya   --region us-east-1   --node-type t2.small
+
+
+-->vi pod.yml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  labels:
+      app: webapp
+      type: front-end
+spec:
+  containers:
+  - name: nginx-container 
+    image: nginx
+
+-->kubectl apply -f pod.yml
+-->Now we have 2 nodes so lets see on which node the pod is created
+-->kubectl get pods -o wide
+   -->NAME    READY   STATUS    RESTARTS   AGE   IP             NODE                           NOMINATED NODE   READINESS GATES
+      myapp   1/1     Running   0          58s   192.168.27.6   ip-192-168-2-84.ec2.internal   <none>           <none>
+-->kubectl get nodes -o wide
+   -->NAME                             STATUS   ROLES    AGE     VERSION               INTERNAL-IP      EXTERNAL-IP      OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-2-84.ec2.internal     Ready    <none>   6m14s   v1.29.0-eks-5e0fdde   192.168.2.84     54.234.195.162   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-36-153.ec2.internal   Ready    <none>   6m22s   v1.29.0-eks-5e0fdde   192.168.36.153   3.230.135.185    Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+
+-->kubectl delete pod myapp
+-->kubectl get pods
+   -->No resources found in default namespace.
+-->kubectl get nodes
+   -->NAME                             STATUS   ROLES    AGE     VERSION
+      ip-192-168-2-84.ec2.internal     Ready    <none>   8m20s   v1.29.0-eks-5e0fdde
+      ip-192-168-36-153.ec2.internal   Ready    <none>   8m28s   v1.29.0-eks-5e0fdde
+-->suppose we want to label 2nd node ip-192-168-36-153.ec2.internal then we give the cmd's
+
+-->kubectl label nodes ip-192-168-36-153.ec2.internal size=Large
+   -->to label the node 
+
+-->vi nodeselector.yaml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  labels:
+      app: webapp
+      type: front-end
+spec:
+  containers:
+  - name: nginx-container 
+    image: nginx
+  nodeSelector:
+    size: Large
+
+-->kubectl apply -f nodeselector.yaml
+-->kubectl get pods -o wide
+   -->NAME    READY   STATUS    RESTARTS   AGE   IP               NODE                             NOMINATED NODE   READINESS GATES
+      myapp   1/1     Running   0          27s   192.168.33.116   ip-192-168-36-153.ec2.internal   <none>           <none>
+
+-->If the pod label does not matches any label, the pod will not get schedule in any nodes
+-->kubectl delete pod myapp
+
+----------------------------------------------------------------------------------------------
+2.Node affinity
+Node affinity is conceptually similar to nodeSelector, allowing you to constrain which nodes your Pod can be scheduled on based on node labels. There are two types of node affinity:
+
+a.requiredDuringSchedulingIgnoredDuringExecution
+***it will schedule if matches the pod and node label only otherwise it will not schedule
+
+b.preferredDuringSchedulingIgnoredDuringExecution:
+
+***if label matches only it will create in matched node otherwise it will create in another node
+---------------------------------------------------------------------------------------------
+
+A)RequiredDuringSchedulingIgnoredDuringExecution:
+
+-->mkdir nar
+-->cd nar
+-->vi nodeaffrequired.yaml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disktype
+            operator: In
+            values:
+            - ssd            
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+
+-->kubectl apply -f nodeaffrequired.yaml
+-->kubectl get pods 
+   -->NAME    READY   STATUS    RESTARTS   AGE
+      nginx   0/1     Pending   0          10s
+   -->it will show status as pending as it didnt find the label
+-->kubectl delete pod nginx
+
+
+B)PreferredDuringSchedulingIgnoredDuringExecution:
+
+-->vi nodeprefaffinity.yaml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: disktype
+            operator: In
+            values:
+            - ssd          
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+
+-->kubectl apply -f nodeprefaffinity.yaml
+-->kubectl get pods
+   -->NAME    READY   STATUS    RESTARTS   AGE
+      nginx   1/1     Running   0          9s
+   -->it will show status as running
+-->kubectl get nodes -o wide
+   -->NAME                             STATUS   ROLES    AGE   VERSION               INTERNAL-IP      EXTERNAL-IP      OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-2-84.ec2.internal     Ready    <none>   20m   v1.29.0-eks-5e0fdde   192.168.2.84     54.234.195.162   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-36-153.ec2.internal   Ready    <none>   20m   v1.29.0-eks-5e0fdde   192.168.36.153   3.230.135.185    Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+-->kubectl get pods -o wide
+   -->NAME    READY   STATUS    RESTARTS   AGE   IP              NODE                           NOMINATED NODE   READINESS GATES
+      nginx   1/1     Running   0          17s   192.168.1.191   ip-192-168-2-84.ec2.internal   <none>           <none>
+
+--> kubectl delete pod nginx
+
+------------------------------------------------------------------------------
+3. Daemonset: 
+
+A Daemonset is another controller that manages pods like Deployments, ReplicaSets, and StatefulSets. It was created for one particular purpose: ensuring that the pods it manages to run on all the cluster nodes.pod is going to schedule all available nodes 
+
+ex : if we have three nodes same pod is going to schedule on three nodes
+------------------------------------------------------------------------------
+
+-->vi daemonset.yaml
+  -->
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: test-nginx
+        image: nginx
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 100m
+            memory: 200Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+
+
+-->kubectl apply -f daemonset.yaml
+-->kubectl get pods
+   -->NAME          READY   STATUS    RESTARTS   AGE
+      nginx-64ddz   1/1     Running   0          26s
+      nginx-fb2hd   1/1     Running   0          26s
+   -->Here we can see 2 pods created as daemonset creates pods in each node available
+-->kubectl get nodes --show-labels
+   -->
+NAME                             STATUS   ROLES    AGE   VERSION               LABELS
+ip-192-168-2-84.ec2.internal     Ready    <none>   40m   v1.29.0-eks-5e0fdde   alpha.eksctl.io/cluster-name=surya,alpha.eksctl.io/nodegroup-name=ng-8eb9eaeb,beta.kubernetes.io/arch=amd64,beta.kubernetes.io/instance-type=t2.small,beta.kubernetes.io/os=linux,eks.amazonaws.com/capacityType=ON_DEMAND,eks.amazonaws.com/nodegroup-image=ami-0515f3963c203d061,eks.amazonaws.com/nodegroup=ng-8eb9eaeb,eks.amazonaws.com/sourceLaunchTemplateId=lt-0ba94318f596ead5e,eks.amazonaws.com/sourceLaunchTemplateVersion=1,failure-domain.beta.kubernetes.io/region=us-east-1,failure-domain.beta.kubernetes.io/zone=us-east-1b,k8s.io/cloud-provider-aws=20ab5eb45466c531b9c4ff1583e05913,kubernetes.io/arch=amd64,kubernetes.io/hostname=ip-192-168-2-84.ec2.internal,kubernetes.io/os=linux,node.kubernetes.io/instance-type=t2.small,topology.kubernetes.io/region=us-east-1,topology.kubernetes.io/zone=us-east-1b
+ip-192-168-36-153.ec2.internal   Ready    <none>   41m   v1.29.0-eks-5e0fdde   alpha.eksctl.io/cluster-name=surya,alpha.eksctl.io/nodegroup-name=ng-8eb9eaeb,beta.kubernetes.io/arch=amd64,beta.kubernetes.io/instance-type=t2.small,beta.kubernetes.io/os=linux,eks.amazonaws.com/capacityType=ON_DEMAND,eks.amazonaws.com/nodegroup-image=ami-0515f3963c203d061,eks.amazonaws.com/nodegroup=ng-8eb9eaeb,eks.amazonaws.com/sourceLaunchTemplateId=lt-0ba94318f596ead5e,eks.amazonaws.com/sourceLaunchTemplateVersion=1,failure-domain.beta.kubernetes.io/region=us-east-1,failure-domain.beta.kubernetes.io/zone=us-east-1f,k8s.io/cloud-provider-aws=20ab5eb45466c531b9c4ff1583e05913,kubernetes.io/arch=amd64,kubernetes.io/hostname=ip-192-168-36-153.ec2.internal,kubernetes.io/os=linux,node.kubernetes.io/instance-type=t2.small,size=Large,topology.kubernetes.io/region=us-east-1,topology.kubernetes.io/zone=us-east-1f
+
+   --> to show lables for each node
+
+-->kubectl label nodes --all size-
+   -->label "size" not found.
+      node/ip-192-168-2-84.ec2.internal not labeled
+      node/ip-192-168-36-153.ec2.internal unlabeled
+   -->to unlable all nodes
+-->kubectl delete pods nginx-64ddz nginx-fb2hd
+   -->kubectl delete pods name1 name2
+-->kubectl get pods
+   -->NAME          READY   STATUS    RESTARTS   AGE
+      nginx-bfvv4   1/1     Running   0          2m38s
+      nginx-gb2ww   1/1     Running   0          2m38s
+   -->We can still see another 2 pods created as we used to daemonset
+-->kubectl get daemonset
+   -->NAME    DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+      nginx   2         2         2       2            2           <none>          30m
+-->kubectl delete daemonset nginx
+
+----------------------------------------------------------------------------
+#Taint and tolleration 
+
+Taints are the opposite -- they allow a node to repel a set of pods. Tolerations are applied to pods. Tolerations allow the scheduler to schedule pods with matching taints.
+
+Two types:
+Noschedule:
+Noexecutive
+
+# Below Commands are for Node Taint and Untaint proces :
+
+
+kubectl taint node ip-192-168-43-22.ap-south-1.compute.internal app=blue:NoSchedule #taint 
+kubectl taint node ip-192-168-43-22.ap-south-1.compute.internal app=blue:NoSchedule- # untaint
+
+kubectl taint node ip-192-168-43-22.ap-south-1.compute.internal app=blue:NoExecute taint
+kubectl taint node ip-192-168-43-22.ap-south-1.compute.internal app=blue:NoExecute-  # untaint
+
+kubectl describe node ip-192-168-45-254.ap-south-1.compute.internal | grep Taints  #to list tainted nodes
+----------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+IMP Note:
+
+*Toleration pod only create into specfic tainted node if labels match
+
+*The taint effect defines how a tainted node reacts to a pod without appropriate toleration. It must be one of the following effects; 
+
+*NoSchedule—The pod will not get scheduled to the node without a matching toleration. (willnot schedule new pods on tainted node but runinng pods will not delete also after enable taint to nodes)
+
+*NoExecute—This will immediately evict all the pods without the matching toleration from the node (no new pods will schedule will and also delete runinng pods also after enable taint to nodes)
+--------------------------------------------------------------------------
+
+-->kubectl get nodes
+   -->NAME                             STATUS   ROLES    AGE   VERSION
+      ip-192-168-2-84.ec2.internal     Ready    <none>   53m   v1.29.0-eks-5e0fdde
+      ip-192-168-36-153.ec2.internal   Ready    <none>   53m   v1.29.0-eks-5e0fdde
+-->kubectl taint node ip-192-168-36-153.ec2.internal app=blue:NoSchedule
+-->kubectl apply -f daemonset.yaml
+-->kubectl get pods
+   -->NAME          READY   STATUS    RESTARTS   AGE
+      nginx-6pc9h   1/1     Running   0          11s
+   -->We can see only 1 pod created
+-->vi tolerate.yaml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    env: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+  tolerations:
+  - key: "app"
+    operator: "Equal"
+    value: "blue"
+    effect: "NoSchedule"
+
+-->kubectl apply -f tolerate.yaml
+-->kubectl get nodes -o wide
+   -->NAME                             STATUS   ROLES    AGE   VERSION               INTERNAL-IP      EXTERNAL-IP      OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-2-84.ec2.internal     Ready    <none>   61m   v1.29.0-eks-5e0fdde   192.168.2.84     54.234.195.162   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-36-153.ec2.internal   Ready    <none>   61m   v1.29.0-eks-5e0fdde   192.168.36.153   3.230.135.185    Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+-->kubectl get pods -o wide
+  -->NAME          READY   STATUS    RESTARTS   AGE   IP              NODE                            NOMINATED NODE   READINESS GATES
+     nginx         1/1     Running   0          22s   192.168.27.6    ip-192-168-36-153.ec2.internal    <none>           <none>
+     nginx-6pc9h   1/1     Running   0          92s   192.168.1.191   ip-192-168-2-84.ec2.internal      <none>           <none>
+  -->We can see two pods
+-->kubectl taint node ip-192-168-36-153.ec2.internal app=blue:NoSchedule-
+   -->To untaint the node
+-->kubectl get pods
+   -->NAME          READY   STATUS    RESTARTS   AGE    IP               NODE                             NOMINATED NODE   READINESS GATES
+      nginx         1/1     Running   0          9m5s   192.168.27.6     ip-192-168-36-153.ec2.internal    <none>           <none>
+      nginx-6pc9h   1/1     Running   0          10m    192.168.1.191    ip-192-168-2-84.ec2.internal     <none>           <none>
+      nginx-pn7g7   1/1     Running   0          5s     192.168.33.116   ip-192-168-36-153.ec2.internal   <none>           <none>
+   -->We can see three pods
+   -->as we have untainted the daemon set will immediately create pod in that untainted node
+-->kubectl delete daemonset nginx
+-->kubectl get pods
+   -->NAME    READY   STATUS    RESTARTS   AGE
+      nginx   1/1     Running   0          11m
+   -->We can see 1 pod running which is tolerate pod
+-->vi pod1.yaml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  labels:
+      app: webapp
+      type: front-end
+spec:
+  containers:
+  - name: nginx-container 
+    image: nginx
+
+-->kubectl apply -f pod1.yaml
+-->kubectl get pods -o wide
+   -->NAME    READY   STATUS    RESTARTS   AGE    IP              NODE                           NOMINATED NODE   READINESS GATES
+      myapp   1/1     Running   0          7m3s   192.168.1.191   ip-192-168-2-84.ec2.internal   <none>           <none>
+   -->we can see 2 pods
+-->kubectl taint node ip-192-168-2-84.ec2.internal app=blue:NoExecute
+   -->node/ip-192-168-2-84.ec2.internal tainted
+-->kubectl get pods -o wide
+   -->No resources found in default namespace.
+-->kubectl taint node ip-192-168-2-84.ec2.internal app=blue:NoExecute-
+   -->node/ip-192-168-2-84.ec2.internal untainted
+
+-->eksctl delete cluster surya  --region us-east-1
+
+
+
+
+###########################################################################################################################################################################################
+
+                                                                       --------- Kubernetes Practice-5 -------(Completed)
+                                                                           ------DEPLOYMENT STRATEGIES------
+
+###########################################################################################################################################################################################
+---------------------------------------------------DEPLOYMENT STRATEGIES------------------------------------
+
+
+DEPLOYMENT STRATEGIES-->
+#ROLLING UPDATES:
+  -We can apply to deployment files only
+
+They are of four types-->
+#RECREATE:
+  -First delete the existing pods and create new pods -- break down --not recommended
+#ROLLING:
+  -We can upgrade the version schedules instead off all to one at a time (by deleting and recreating one at a time) -- no Down time
+#BLUE GREEN:
+  -By changing the service lables we can allow access to upgraded pod 
+#CANARY:
+  -Canary also similar to Blue green but difference iswe can test the new version and allow to access we can follow here rampup and down process
+---------------------------------------------------------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name surya   --region us-east-1   --node-type t2.small
+
+---------------------------------------------------------------------------------------
+
+#RECREATE:
+  -First delete the existing pods and create new pods -- break down --not recommended
+
+---------------------------------------------------------------------------------------
+
+-->mkdir depstrat 
+-->cd depstrat
+-->vi recreate.yaml
+   -->
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: default
+spec:
+  strategy:
+    type: Recreate
+  replicas: 4
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: nginx:1.25.3 # recreate dployment after chnaging the version
+          ports:
+            - name: http
+              containerPort: 8181
+          
+
+-->kubectl apply -f recreate.yml
+-->kubectl get pods
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      myapp-799984ccd5-kq6x8   1/1     Running   0          22s
+      myapp-799984ccd5-qktgv   1/1     Running   0          22s
+      myapp-799984ccd5-rsjw6   1/1     Running   0          22s
+      myapp-799984ccd5-zbmbz   1/1     Running   0          22s
+   -->it will show 4 pods
+-->vi recreate.yml
+   -->
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: default
+spec:
+  strategy:
+    type: Recreate
+  replicas: 4
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: nginx:latest # recreate deployment after chnaging the version
+          ports:
+            - name: http
+              containerPort: 8181
+          
+-->kubectl apply -f recreate.yml
+-->kubectl get pods
+   -->NAME                     READY   STATUS              RESTARTS   AGE
+      myapp-677894f647-4d9l8   0/1     ContainerCreating   0          4s
+      myapp-677894f647-dlbdm   0/1     ContainerCreating   0          4s
+      myapp-677894f647-sb5rg   0/1     ContainerCreating   0          4s
+      myapp-677894f647-zdwvl   0/1     ContainerCreating   0          4s
+   -->it will show 4 pods which are newly created as the version is changed
+-->kubectl get pods
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      myapp-677894f647-4d9l8   1/1     Running   0          9s
+      myapp-677894f647-dlbdm   1/1     Running   0          9s
+      myapp-677894f647-sb5rg   1/1     Running   0          9s
+      myapp-677894f647-zdwvl   1/1     Running   0          9s
+-->kubectl delete deployment myapp
+
+---------------------------------------------------------------------------------------
+#ROLLING:
+  -We can upgrade the version schedules instead off all to one at a time (by deleting and recreating one at a time) -- no Down time
+---------------------------------------------------------------------------------------
+
+-->vi rolling.yml
+   -->
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: default
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  replicas: 4
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: nginx:1.25.3 #apply rollback deployment after changing the version  
+          ports:
+            - name: http
+              containerPort: 8181
+          
+
+-->kubectl apply -f rolling.yml
+-->kubectl get pods
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      myapp-799984ccd5-2spbb   1/1     Running   0          8s
+      myapp-799984ccd5-dj5j9   1/1     Running   0          8s
+      myapp-799984ccd5-pwx4c   1/1     Running   0          8s
+      myapp-799984ccd5-vcrgt   1/1     Running   0          8s
+   -->it will show four pods
+-->kubectl scale deploy myapp --replicas=5
+-->kubectl get pods
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      myapp-799984ccd5-2spbb   1/1     Running   0          119s
+      myapp-799984ccd5-bbb4r   1/1     Running   0          3s
+      myapp-799984ccd5-dj5j9   1/1     Running   0          119s
+      myapp-799984ccd5-pwx4c   1/1     Running   0          119s
+      myapp-799984ccd5-vcrgt   1/1     Running   0          119s
+   -->it will show five pods
+-->kubectl scale deploy myapp --replicas=1
+-->kubectl get pods
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      myapp-799984ccd5-dj5j9   1/1     Running   0          5m14s
+   -->it will show only one pods
+-->kubectl scale deploy myapp --replicas=50
+-->kubectl get pods --watch
+   -->
+NAME                     READY   STATUS              RESTARTS   AGE
+myapp-799984ccd5-225h4   0/1     Pending             0          6s
+myapp-799984ccd5-24nt5   0/1     Pending             0          7s
+myapp-799984ccd5-2hsvw   0/1     Pending             0          6s
+myapp-799984ccd5-2jllc   1/1     Running             0          7s
+myapp-799984ccd5-2n5lr   0/1     Pending             0          7s
+myapp-799984ccd5-2smcq   0/1     Pending             0          7s
+myapp-799984ccd5-4lb52   0/1     Pending             0          6s
+myapp-799984ccd5-4prsh   0/1     Pending             0          7s
+myapp-799984ccd5-6xkqb   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-72p64   0/1     Pending             0          6s
+myapp-799984ccd5-7xh4h   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-882hw   0/1     Pending             0          6s
+myapp-799984ccd5-8hbq7   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-8ldtv   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-bdg6l   0/1     Pending             0          6s
+myapp-799984ccd5-bhvgx   0/1     Pending             0          7s
+myapp-799984ccd5-bvjnl   0/1     Pending             0          6s
+myapp-799984ccd5-c9v47   0/1     Pending             0          7s
+myapp-799984ccd5-cpx4t   0/1     Pending             0          6s
+myapp-799984ccd5-dj5j9   1/1     Running             0          7m40s
+myapp-799984ccd5-dm8tz   0/1     Pending             0          7s
+myapp-799984ccd5-fhklh   0/1     Pending             0          7s
+myapp-799984ccd5-fn949   0/1     Pending             0          6s
+myapp-799984ccd5-h7kj4   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-hb7cf   0/1     Pending             0          7s
+myapp-799984ccd5-hml96   0/1     Pending             0          6s
+myapp-799984ccd5-jpg8l   1/1     Running             0          7s
+myapp-799984ccd5-k75fl   0/1     Pending             0          6s
+myapp-799984ccd5-kt7zz   0/1     Pending             0          7s
+myapp-799984ccd5-lm6tx   0/1     Pending             0          6s
+myapp-799984ccd5-mkqf2   0/1     Pending             0          7s
+myapp-799984ccd5-mnxvk   1/1     Running             0          7s
+myapp-799984ccd5-mttsb   1/1     Running             0          7s
+myapp-799984ccd5-mwsds   0/1     Pending             0          7s
+myapp-799984ccd5-n2th4   0/1     Pending             0          6s
+myapp-799984ccd5-nm48v   0/1     Pending             0          6s
+myapp-799984ccd5-q967r   0/1     Pending             0          6s
+myapp-799984ccd5-q9tzk   1/1     Running             0          7s
+myapp-799984ccd5-rrtmm   0/1     Pending             0          6s
+myapp-799984ccd5-sjznx   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-tjz8n   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-v8t74   0/1     Pending             0          6s
+myapp-799984ccd5-vfmhc   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-vq8pt   0/1     Pending             0          6s
+myapp-799984ccd5-vsckk   0/1     Pending             0          7s
+myapp-799984ccd5-wwp9x   0/1     ContainerCreating   0          7s
+myapp-799984ccd5-x7bn8   0/1     Pending             0          7s
+myapp-799984ccd5-xczct   0/1     Pending             0          7s
+myapp-799984ccd5-znpc2   1/1     Running             0          7s
+myapp-799984ccd5-zz9vb   0/1     Pending             0          7s
+   -->it will show fifty pods which gets running by each set which has 25% of total sets
+-->kubectl delete deployment myapp
+
+---------------------------------------------------------------------------------------
+#BLUE GREEN:
+  -By changing the service lables we can allow access to upgraded pod
+---------------------------------------------------------------------------------------
+
+-->mkdir bluegreen
+-->cd bluegreen
+-->vi blue.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blue-myapp
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+      replica: blue
+  template:
+    metadata:
+      labels:
+        app: myapp
+        replica: blue
+    spec:
+      containers:
+        - name: myapp
+          image: nginx
+          ports:
+            - name: http
+              containerPort: 80
+
+-->kubectl apply -f blue.yml
+-->kubectl get pods
+   -->NAME                          READY   STATUS    RESTARTS   AGE
+      blue-myapp-7f65ddbfbb-5j2tt   1/1     Running   0          7s
+      blue-myapp-7f65ddbfbb-jzh9g   1/1     Running   0          7s
+   -->It will show 2 pods
+-->vi service.yml
+   -->
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: myapp
+    replica: blue  #enables blue or green deployment to give access service here blue is nginx and green is httpd for our understanding
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: http
+        
+-->kubectl apply -f service.yml
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+      kubernetes   ClusterIP   10.100.0.1      <none>        443/TCP        34m
+      myapp        NodePort    10.100.99.236   <none>        80:31579/TCP   9s
+   -->It will show 2 service
+-->kubectl get nodes -o wide
+  -->NAME                             STATUS   ROLES    AGE   VERSION               INTERNAL-IP      EXTERNAL-IP      OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+     ip-192-168-23-254.ec2.internal   Ready    <none>   26m   v1.29.0-eks-5e0fdde   192.168.23.254   52.23.162.237    Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+     ip-192-168-48-220.ec2.internal   Ready    <none>   26m   v1.29.0-eks-5e0fdde   192.168.48.220   54.163.204.247   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+  -->it will show two nodes with their Ip's
+-->copy the ip and port no of service to access the webpage of application, If ii is not accessable enable node SG to All traffic and anywhere
+   -->54.163.204.247:31579
+-->vi green.yml
+   -->
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: green-myapp
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+      replica: green
+  template:
+    metadata:
+      labels:
+        app: myapp
+        replica: green
+    spec:
+      containers:
+        - name: myapp
+          image: httpd
+          ports:
+            - name: http
+              containerPort: 80
+        
+
+-->kubectl apply -f green.yml
+-->kubectl get pods
+  -->NAME                           READY   STATUS    RESTARTS   AGE
+     blue-myapp-7f65ddbfbb-5j2tt    1/1     Running   0          3m59s
+     blue-myapp-7f65ddbfbb-jzh9g    1/1     Running   0          3m59s
+     green-myapp-666bb64c77-bw88w   1/1     Running   0          11s
+     green-myapp-666bb64c77-cb5jn   1/1     Running   0          11s
+  -->It will show 4 pods running 2 of them are blue and 2 of them are green deployments
+-->But here green one has no load as the service is attached to blue
+-->vi service.yml
+   -->
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: myapp
+    replica: green  #enables blue or green deployment to give access service here blue is nginx and green is httpd for our understanding
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: http
+
+-->Now we change the service to green pod, so we have no down time as the new pods are already running
+-->kubectl apply -f service.yml
+-->kubectl delete deployment blue-myapp
+-->kubectl delete deployment green-myapp
+-->kubectl delete svc myapp
+
+---------------------------------------------------------------------------------------
+#CANARY:
+  -Canary also similar to Blue green but difference is we dont change the label so that we can test the new version and allow to access we can follow here rampup and down process
+  -Here the 2 pods will have same service attached at once
+---------------------------------------------------------------------------------------
+
+-->cd ..
+-->mkdir canary
+-->cd canary
+-->vi canary1.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: canary-demo-v1-deployment
+  labels:
+    app: canary-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: canary-demo
+
+  template:
+    metadata:
+      labels:
+        app: canary-demo
+    spec:
+      containers:
+        - name: canary-demo-v1
+          image: nginx #version-1
+          resources:
+            requests:
+              cpu: "10m" #1% of a core
+              memory: "150Mi"
+            limits:
+              cpu: "50m" #5% of a core
+              memory: "400Mi"
+          imagePullPolicy: Always
+      restartPolicy: Always
+      
+      
+-->kubectl apply -f canary1.yml
+-->kubectl get pods
+   -->NAME                                        READY   STATUS    RESTARTS   AGE
+      canary-demo-v1-deployment-b5cc5bd99-klbzl   1/1     Running   0          85s
+   -->it will show one pod
+-->vi service.yml
+   -->
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: canary-service
+  labels:
+    app: canary-demo
+spec:
+  type: NodePort
+  # type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http-port
+      protocol: TCP
+  selector:
+    app: canary-demo
+
+-->kubectl apply -f service.yml
+-->kubectl get svc
+   -->NAME             TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+      canary-service   NodePort    10.100.49.60   <none>        80:31930/TCP   9s
+      kubernetes       ClusterIP   10.100.0.1     <none>        443/TCP        43m
+   -->it will show 2 services and note the port no os service
+-->kubectl get nodes -o wide
+   -->NAME                             STATUS   ROLES    AGE   VERSION               INTERNAL-IP      EXTERNAL-IP      OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-23-254.ec2.internal   Ready    <none>   35m   v1.29.0-eks-5e0fdde   192.168.23.254   52.23.162.237    Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-48-220.ec2.internal   Ready    <none>   35m   v1.29.0-eks-5e0fdde   192.168.48.220   54.163.204.247   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+   -->in the two nodes copy the ip
+-->give ip and port no os service to access the webpage
+   -->http://54.163.204.247:31930/
+-->Now we want to create new version with same lables
+-->vi canary2.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: canary-demo-v2-deployment
+  labels:
+    app: canary-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: canary-demo
+
+  template:
+    metadata:
+      labels:
+        app: canary-demo
+    spec:
+      containers:
+        - name: canary-demo-v2
+          image: httpd #version-2
+          resources:
+            requests:
+              cpu: "10m" #1% of a core
+              memory: "150Mi"
+            limits:
+              cpu: "50m" #5% of a core
+              memory: "400Mi"
+          imagePullPolicy: Always
+      restartPolicy: Always
+      
+      
+-->kubectl apply -f canary2.yml
+-->kubectl get pods
+   -->NAME                                         READY   STATUS    RESTARTS   AGE
+      canary-demo-v1-deployment-b5cc5bd99-klbzl    1/1     Running   0          5m35s
+      canary-demo-v2-deployment-6d94f75b4b-79k6r   1/1     Running   0          8s
+-->now acces the webpage and it shows us http instead of nginx
+-->kubectl get deploy 
+   -->NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+      canary-demo-v1-deployment   1/1     1            1           6m31s
+      canary-demo-v2-deployment   1/1     1            1           64s
+   -->it will show two deployments
+-->kubectl scale deploy canary-demo-v2-deployment --replicas=4
+-->kubectl get pods
+   -->NAME                                         READY   STATUS    RESTARTS   AGE
+      canary-demo-v1-deployment-b5cc5bd99-klbzl    1/1     Running   0          7m10s
+      canary-demo-v2-deployment-6d94f75b4b-79k6r   1/1     Running   0          103s
+      canary-demo-v2-deployment-6d94f75b4b-ll89t   1/1     Running   0          6s
+      canary-demo-v2-deployment-6d94f75b4b-vqbv2   1/1     Running   0          6s
+      canary-demo-v2-deployment-6d94f75b4b-wsksj   1/1     Running   0          6s
+   -->it will show 5 pods, 4 of them are v2 deploys
+
+-->eksctl delete cluster surya  --region us-east-1
+
+
+###########################################################################################################################################################################################
+
+                                                                          ------- Kubernetes Practice-6 -------(completed)
+                                                                             -----RDS, DB and Statefulset------
+
+###########################################################################################################################################################################################
+
+---------------------------------------------------RDS, DB and Statefulset------------------------------------
+
+------------------------------------------------------------------
+A)Creating a DATABASE
+ ___________________________________________________________________________________________________________________________
+|   My DB on Ec2                                         |              RDS                                                 |
+|--------------------------------------------------------|------------------------------------------------------------------|
+|  High availability                                     |       easily H.A                                                 |
+|   Full control on developer                            |       cloud managed DB service                                   |
+|   Need to configure                                    |       Monitering is easy                                         |
+|   Storage autoscaling need to configurre               |       storage autoscaling just enable it                         |
+|   Multiple Az need to configure                        |       just enable multi Az                                       |
+|   Need to take care everything by developers           |       patching and os upgradations taking care by prviders       |
+|________________________________________________________|__________________________________________________________________|
+
+-->Go to AWS RDS -> create DB -> select standard create -> select Mysql engine -> select free tire as remaining cost huge -> keep master name as admin and give password as testtesttest 
+   -> select VPC -> enable public access -> create DB
+-->To create read replica we go to actions -> create read replica
+-->In laptop open Mysql workbench -> click on + sign beside Mysql connections 
+   -> give connection name as anything, give hostname as RDS endpoint(database-1.cp6u4wakokvv.us-east-1.rds.amazonaws.com), give username as admin, also password 
+   -> click on test connection it will show successful -> select the DB 
+-->Now we can give sql cmd to create inside the DB
+-->
+create database test;
+
+CREATE TABLE test.Persons (
+    PersonID int,
+    LastName varchar(255),
+    FirstName varchar(255),
+    Address varchar(255),
+    City varchar(255)
+);
+
+-->Now execute this code 
+------------------------------------------------------------------
+
+B)Statefulset 
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name surya   --region us-east-1   --node-type t2.small
+
+
+-->Create a RDS DB and then go to instance
+-->sudo su -
+-->mkdir sfs
+-->cd sfs
+-->vi deploy.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80 
+
+-->kubectl apply -f deploy.yml
+-->kubectl get pods
+   -->NAME                                READY   STATUS    RESTARTS   AGE
+      nginx-deployment-86dcfdf4c6-7r44f   1/1     Running   0          58s
+      nginx-deployment-86dcfdf4c6-l9dgw   1/1     Running   0          59s
+      nginx-deployment-86dcfdf4c6-sj2f2   1/1     Running   0          59s
+-->kubectl delete pod nginx-deployment-86dcfdf4c6-7r44f
+-->kubectl get pods
+   -->NAME                                READY   STATUS    RESTARTS   AGE
+      nginx-deployment-86dcfdf4c6-6rr27   1/1     Running   0          6s
+      nginx-deployment-86dcfdf4c6-l9dgw   1/1     Running   0          84s
+      nginx-deployment-86dcfdf4c6-sj2f2   1/1     Running   0          84s
+   -->we can see three pods but the newly created one has different name compared to the previous deleted pod
+-->kubectl delete deploy nginx-deployment
+-->vi deploy.yml
+  -->
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80 
+
+-->kubectl apply -f deploy.yml
+-->kubectl get pods 
+   -->NAME                 READY   STATUS    RESTARTS   AGE
+      nginx-deployment-0   1/1     Running   0          12s
+      nginx-deployment-1   1/1     Running   0          12s
+      nginx-deployment-2   1/1     Running   0          11s
+   -->Here we can see three pods
+-->kubectl delete pod nginx-deployment-0
+-->kubectl get pods
+   -->NAME                 READY   STATUS    RESTARTS   AGE
+      nginx-deployment-0   1/1     Running   0          4s
+      nginx-deployment-1   1/1     Running   0          36s
+      nginx-deployment-2   1/1     Running   0          35s
+   -->Here we can see three pods and also the newly created one has same name as the previous
+-->kubectl get statefulset
+   -->NAME               READY   AGE
+      nginx-deployment   3/3     104s
+-->kubectl delete statefulset nginx-deployment
+-->cd ..
+-->mkdir vlm
+-->cd vlm
+-->Now we install helm chart
+-->wget https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+-->tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
+-->mv linux-amd64/helm /usr/local/bin/helm
+-->chmod 777 /usr/local/bin/helm
+-->helm version
+   -->version.BuildInfo{Version:"v3.14.0", GitCommit:"3fc9f4b2638e76f26739cd77c7017139be81d0ea", GitTreeState:"clean", GoVersion:"go1.21.5"}
+-->Now we need to install a CSI driver so that our node can communicate with EBS
+-->helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
+-->helm repo update
+-->helm upgrade --install aws-ebs-csi-driver --namespace kube-system aws-ebs-csi-driver/aws-ebs-csi-driver
+-->cd ..
+-->vi storage.yml
+   -->
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-storage
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer #Immediate
+reclaimPolicy: Delete #Retain
+parameters:
+  type: gp2
+
+-->kubectl apply -f storage.yml
+-->Here the storage class give a provision to create volume
+-->kubectl get sc
+   -->NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+      ebs-storage     ebs.csi.aws.com         Delete          WaitForFirstConsumer   false                  24s
+      gp2 (default)   kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  40m
+   -->Here sc means storage class
+-->vi statefulset.yml
+   -->
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  serviceName: mongodb
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: admin
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: testtesttest
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: ebs-storage
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  clusterIP: None
+
+-->kubectl apply -f statefulset.yml
+-->kubectl get pods
+   -->NAME        READY   STATUS              RESTARTS   AGE
+      mongodb-0   0/1     ContainerCreating   0          6s
+-->kubectl get pv
+   -->NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                            STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      pvc-1d7da60b-f785-4adb-8baa-cace4ec7b981   1Gi        RWO            Delete           Bound    default/mongodb-data-mongodb-0   ebs-storage    <unset>                          13s
+-->kubectl get pvc
+   -->NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      mongodb-data-mongodb-0   Bound    pvc-1d7da60b-f785-4adb-8baa-cace4ec7b981   1Gi        RWO            ebs-storage    <unset>                 5m15s
+
+-->kubectl get pods
+   -->NAME        READY   STATUS    RESTARTS   AGE
+      mongodb-0   1/1     Running   0          2m26s
+      mongodb-1   1/1     Running   0          111s
+      mongodb-2   1/1     Running   0          77s  
+-->kubectl get pv
+   -->NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                            STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      pvc-08da9446-31fd-4a9b-a2c0-58a6f682b270   1Gi        RWO            Delete           Bound    default/mongodb-data-mongodb-2   ebs-storage    <unset>                          2m12s
+      pvc-1d7da60b-f785-4adb-8baa-cace4ec7b981   1Gi        RWO            Delete           Bound    default/mongodb-data-mongodb-0   ebs-storage    <unset>                          3m20s
+      pvc-f466ee3f-3e24-4ddc-9774-2ec717961918   1Gi        RWO            Delete           Bound    default/mongodb-data-mongodb-1   ebs-storage    <unset>                          2m46s
+-->kubectl get pvc
+   -->NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      mongodb-data-mongodb-0   Bound    pvc-1d7da60b-f785-4adb-8baa-cace4ec7b981   1Gi        RWO            ebs-storage    <unset>                 8m48s
+      mongodb-data-mongodb-1   Bound    pvc-f466ee3f-3e24-4ddc-9774-2ec717961918   1Gi        RWO            ebs-storage    <unset>                 3m23s
+      mongodb-data-mongodb-2   Bound    pvc-08da9446-31fd-4a9b-a2c0-58a6f682b270   1Gi        RWO            ebs-storage    <unset>                 2m49s
+-->kubectl delete -f .
+-->kubectl delete pvc mongodb-data-mongodb-0 mongodb-data-mongodb-1 mongodb-data-mongodb-2
+-->kubectl get pv
+   -->No resources found
+-->kubectl get sc
+   -->NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+      gp2 (default)   kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  50m
+
+-->eksctl delete cluster surya  --region us-east-1
+
+
+
+
+###########################################################################################################################################################################################
+
+                                                                            ----- Kubernetes Practice-7 ------- (In Static-cloudpath pod not creating))
+                                                                                 ------volumes------
+
+###########################################################################################################################################################################################
+---------------------------------------------------volumes------------------------------------------------------
+
+--------------------------------------------------------------------------
+#Pod is very light weight and lifecycle of thee pod is very less
+#If pod is deleted volume also deleted its ephemeral storage
+#If we want maintain persistance storage
+#We have three types in volume
+#1)PV(PERSISTENCE VOLUME)  2)PVC(PERSISTENCE VOLUME CLAIM)  3)Storageclass
+#PV-> If we create a PV means we are creating a volume
+#PVC->used to assign the volume or mount the volume
+#Storage class->lets you dynamically provision persistent volumes (PV) in a Kubernetes cluster
+#Here the PVC selects the PV based on storage and access mode
+--------------------------------------------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name surya   --region us-east-1   --node-type t2.small
+
+-->git clone https://github.com/Praneeth9630/Kubernetes.git
+-->ls
+   -->Kubernetes
+-->cd Kubernetes
+-->cd day-10-volumes
+-->ls
+   -->static-hostpath  static-cloudpath  dynamic volume provision
+--------------------------------------------------------------------------
+1)Static-hostpath -> Here the storage is created by taking from Host Nodes
+--------------------------------------------------------------------------
+
+-->cd static-hostpath
+-->ls
+   -->dep.yml  pv.yml  pvc.yml
+-->vi pv.yml
+   -->
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+
+-->vi pvc.yml
+   -->
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+-->vi dep.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - image: mysql:8.0
+          name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: password
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+
+-->kubectl get nodes
+   -->NAME                             STATUS   ROLES    AGE   VERSION
+      ip-192-168-30-64.ec2.internal    Ready    <none>   19m   v1.29.0-eks-5e0fdde
+      ip-192-168-46-145.ec2.internal   Ready    <none>   19m   v1.29.0-eks-5e0fdde
+-->kubectl get pv
+   -->No resources
+-->kubectl get pvc
+   -->No resources
+-->kubectl apply -f pv.yml
+-->kubectl apply -f pvc.yml
+-->kubectl get pv
+   -->NAME       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                    STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      mysql-pv   5Gi        RWO            Retain           Bound    default/mysql-pv-claim   manual         <unset>                          20s
+-->kubectl get pvc
+   -->NAME             STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      mysql-pv-claim   Bound    mysql-pv   5Gi        RWO            manual         <unset>                 13s
+-->kubectl apply -f dep.yml
+-->kubectl get pods
+   -->NAME                    READY   STATUS    RESTARTS   AGE
+      mysql-d6f56dd44-lpnm5   1/1     Running   0          17s
+-->kubectl get pvc
+   -->NAME             STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      mysql-pv-claim   Bound    mysql-pv   5Gi        RWO            manual         <unset>                 106s
+   -->in status it shoes bound
+-->kubectl exec -it mysql-d6f56dd44-lpnm5 /bin/bash
+-->ls
+   -->bin  boot  dev  docker-entrypoint-initdb.d  entrypoint.sh  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+
+-->cd var/lib
+-->cd mysql
+-->ls
+   -->'#ib_16384_0.dblwr'  '#innodb_temp'   binlog.000002   ca.pem            ib_buffer_pool   mysql        performance_schema   server-cert.pem   undo_001
+      '#ib_16384_1.dblwr'   auto.cnf        binlog.index    client-cert.pem   ibdata1          mysql.ibd    private_key.pem      server-key.pem    undo_002
+      '#innodb_redo'        binlog.000001   ca-key.pem      client-key.pem    ibtmp1           mysql.sock   public_key.pem       sys
+-->cd ../../..
+-->mysql -u root -p
+   -->password is password or press enter
+-->Now we will be in mysql pod
+-->create database test;
+-->show database;
+   -->mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
+| test               |
++--------------------+
+5 rows in set (0.00 sec)
+
+-->exit
+-->exit
+**Remember here volume is created inside the node
+-->ls
+   -->dep.yml  pv.yml  pvc.yml
+-->kubectl get deploy
+   -->NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+      mysql   1/1     1            1           7m11s
+-->kubectl delete deploy mysql
+-->kubectl get pv
+   -->NAME       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                    STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      mysql-pv   5Gi        RWO            Retain           Bound    default/mysql-pv-claim   manual         <unset>                          8m53s
+   -->Here even if we delete the deploy the volume will not get deleted
+-->kubectl get pvc
+   -->NAME             STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      mysql-pv-claim   Bound    mysql-pv   5Gi        RWO            manual         <unset>                 9m1s
+-->kubectl delete pvc mysql-pv-claim
+-->kubectl delete pv mysql-pv
+-->cd ..
+
+---------------------------------------------------------------------------
+2)Static-cloudpath -> Here manually we create EBS volume for use
+---------------------------------------------------------------------------
+
+-->ls
+   -->static-hostpath  static-cloudpath  dynamic volume provision
+-->cd static-cloudpath
+-->Now we install helm chart
+-->wget https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+-->tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
+-->mv linux-amd64/helm /usr/local/bin/helm
+-->chmod 777 /usr/local/bin/helm
+-->helm version
+   -->version.BuildInfo{Version:"v3.14.0", GitCommit:"3fc9f4b2638e76f26739cd77c7017139be81d0ea", GitTreeState:"clean", GoVersion:"go1.21.5"}
+-->Now we need to install a CSI driver so that our node can communicate with EBS
+-->helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
+-->helm repo update
+-->helm upgrade --install aws-ebs-csi-driver --namespace kube-system aws-ebs-csi-driver/aws-ebs-csi-driver
+-->To verify that aws-ebs-csi-driver has started, run:
+-->kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver,app.kubernetes.io/instance=aws-ebs-csi-driver"
+   -->NAME                                  READY   STATUS    RESTARTS   AGE
+      ebs-csi-controller-5d4994c978-88jzv   5/5     Running   0          54s
+      ebs-csi-controller-5d4994c978-lkpqr   5/5     Running   0          54s
+      ebs-csi-node-lwhxn                    3/3     Running   0          54s
+      ebs-csi-node-xfrc9                    3/3     Running   0          54s
+-->ls
+   -->dep.yml  pv.yml  pvc.yml
+-->Now create a EBS volume of 1 GB and copy its volume id and paste it in pv.yml volume handlers
+   -->vol-034bbf8299b3255ac
+-->vi pv.yml
+   -->
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  csi:
+    driver: ebs.csi.aws.com
+    fsType: ext4
+    volumeHandle: vol-034bbf8299b3255ac
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: topology.ebs.csi.aws.com/zone
+              operator: In
+              values:
+                - us-east-1a
+                - us-east-1b
+                - us-east-1c
+                - us-east-1d
+
+
+-->vi pvc.yml
+   -->
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ebs-claim
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+-->vi dep.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+  name: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - image: nginx
+          name: app
+          volumeMounts:
+            - mountPath: /data/db
+              name: db-store
+      volumes:
+        - name: db-store
+          persistentVolumeClaim:
+            claimName: ebs-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-svc
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  type: NodePort
+
+-->kubectl apply -f .
+   -->deployment.apps/webapp created
+      service/mongo-svc created
+      persistentvolume/test-pv-claim created
+      persistentvolumeclaim/ebs-claim created
+-->kubectl get pods
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      webapp-9cf9795bb-29l9f   0/1     Pending   0          44s
+-->kubectl get pvc
+   -->NAME        STATUS   VOLUME          CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      ebs-claim   Bound    test-pv-claim   1Gi        RWO                           <unset>                 88s
+-->kubectl get pv
+   -->NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM               STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      test-pv-claim   1Gi        RWO            Retain           Bound    default/ebs-claim                  <unset>                          3m2s
+-->kubectl describe pod webapp-9cf9795bb-29l9f
+   -->Warning  FailedScheduling  3m32s  default-scheduler  0/2 nodes are available: 2 node(s) had volume node affinity conflict. preemption: 0/2 nodes are available: 2 Preemption is not 
+      helpful for scheduling.
+-->kubectl delete -f .
+   -->deployment.apps "webapp" deleted
+      service "mongo-svc" deleted
+      persistentvolume "test-pv-claim" deleted
+      persistentvolumeclaim "ebs-claim" deleted
+-->kubectl get pvc
+   -->No resources found in default namespace.
+-->kubectl get pv
+   -->No resources found in default namespace.
+-->Node need to connect EBS so it needs the permission for it
+-->Go to AWS EKS -> click on cluster name -> go to compute -> click on nodegroup -> click on node iam role arn -> add permissions -> attach policy -> admin access -> add permissions
+-->kubectl apply -f pv.yml
+-->
+-->kubectl get pv
+   -->NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      test-pv-claim   1Gi        RWO            Retain           Available                          <unset>                          8s
+-->kubectl apply -f pvc.yml
+-->kubectl get pv
+   -->NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM               STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      test-pv-claim   1Gi        RWO            Retain           Bound    default/ebs-claim                  <unset>                          41s
+-->kubectl get pvc
+   -->NAME        STATUS   VOLUME          CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      ebs-claim   Bound    test-pv-claim   1Gi        RWO                           <unset>                 30s
+-->kubectl apply -f deploy.yml
+-->kubectl get pods
+   -->NAME                     READY   STATUS              RESTARTS   AGE
+      webapp-9cf9795bb-fwg84   0/1     ContainerCreating   0          115s
+-->kubectl describe pod 
+   -->
+  Warning  FailedAttachVolume  2s  attachdetach-controller  AttachVolume.Attach failed for volume "test-pv-claim" : rpc error: code = Internal desc = Could not attach volume "vol-034bbf8299b3255ac" to node "i-08991579a3d87675a": could not attach volume "vol-034bbf8299b3255ac" to node "i-08991579a3d87675a": InvalidVolume.ZoneMismatch: The volume 'vol-034bbf8299b3255ac' is not in the same availability zone as instance 'i-08991579a3d87675a'
+           status code: 400, request id: d230c647-99c5-4733-bb76-1aeb4202146d
+
+-->Here we created in the volume manually and using here
+-->kubectl delete -f .
+-->kubectl get pv
+   -->No resource
+-->kubectl get pvc
+   -->No resource
+-->kubectl get pods
+   -->No resource
+-->cd ..
+---------------------------------------------------------------------------------------------------------------------------------------------
+3)Dynamic volume provision -> Here storage class will create EBS volume and here we wont create seperate pvc we will include it in deploy.yml
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+-->cd dynamic_volume_provision
+-->ls
+   -->dep.yml  sc.yml
+-->vi sc.yml
+   -->
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-storage
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer #Immediate
+reclaimPolicy: Delete #Retain
+parameters:
+  type: gp2
+
+-->vi dep.yml
+   -->
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  serviceName: mongodb
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: admin
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: testtesttest
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: ebs-storage
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  clusterIP: None
+
+-->kubectl apply -f sc.yml
+-->kubectl get sc
+   -->NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+      ebs-storage     ebs.csi.aws.com         Delete          WaitForFirstConsumer   false                  9s
+      gp2 (default)   kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  78m
+-->kubectl get pv
+   -->No resource
+-->here as kept the condidtion wait for first consumer so pv is created onyl after pod is created
+-->kubectl apply -f dep.yml
+-->kubectl get pods
+   -->kubectl get pods
+      NAME        READY   STATUS              RESTARTS   AGE
+      mongodb-0   1/1     Running             0          66s
+      mongodb-1   0/1     ContainerCreating   0          32s
+-->kubectl get pvc
+   -->NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+      mongodb-data-mongodb-0   Bound    pvc-9357429e-e692-4f55-a52a-eb026d028367   1Gi        RWO            ebs-storage    <unset>                 14s
+-->kubectl get pv
+   -->NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                            STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+      pvc-9357429e-e692-4f55-a52a-eb026d028367   1Gi        RWO            Delete           Bound    default/mongodb-data-mongodb-0   ebs-storage    <unset>                          27s
+-->kubectl get pods
+   -->NAME        READY   STATUS    RESTARTS   AGE
+      mongodb-0   1/1     Running   0          113s
+      mongodb-1   1/1     Running   0          79s
+      mongodb-2   1/1     Running   0          44s
+-->here as kept the condidtion wait for first consumer so pv is created onyl after pod is created
+-->kubectl get statefulset
+   -->NAME      READY   AGE
+      mongodb   3/3     2m18s
+-->kubectl delete statefulset mongodb
+
+
+-->eksctl delete cluster surya  --region us-east-1
+
+
+
+###########################################################################################################################################################################################
+
+                                                                        ------------ Kubernetes Practice-8 -----------(Completed) 
+                                                                         -----Monitering with Grafana and prometheus-----
+
+###########################################################################################################################################################################################
+---------------------------------------------------Monitering with Grafana and prometheus------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name jack   --region us-east-1   --node-type t2.small 
+
+-->wget https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+-->tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
+-->mv linux-amd64/helm /usr/local/bin/helm
+-->chmod 777 /usr/local/bin/helm
+-->helm version
+   -->
+-->helm repo add stable https://charts.helm.sh/stable
+-->helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+-->kubectl create namespace prometheus
+-->helm install stable prometheus-community/kube-prometheus-stack -n prometheus
+-->kubectl get pods -n prometheus
+   -->NAME                                                     READY   STATUS    RESTARTS   AGE
+      alertmanager-stable-kube-prometheus-sta-alertmanager-0   2/2     Running   0          51s
+      prometheus-stable-kube-prometheus-sta-prometheus-0       2/2     Running   0          51s
+      stable-grafana-5d6ff48d99-qzsmn                          3/3     Running   0          57s
+      stable-kube-prometheus-sta-operator-56f769f994-vgfdb     1/1     Running   0          57s
+      stable-kube-state-metrics-75bf56f4c8-lzkl6               1/1     Running   0          57s
+      stable-prometheus-node-exporter-2rrnv                    1/1     Running   0          57s
+      stable-prometheus-node-exporter-slwrg                    1/1     Running   0          57s
+-->kubectl get svc -n prometheus
+   -->NAME                                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+      alertmanager-operated                     ClusterIP   None             <none>        9093/TCP,9094/TCP,9094/UDP   64s
+      prometheus-operated                       ClusterIP   None             <none>        9090/TCP                     64s
+      stable-grafana                            ClusterIP   10.100.245.202   <none>        80/TCP                       70s
+      stable-kube-prometheus-sta-alertmanager   ClusterIP   10.100.156.21    <none>        9093/TCP,8080/TCP            70s
+      stable-kube-prometheus-sta-operator       ClusterIP   10.100.143.198   <none>        443/TCP                      70s
+      stable-kube-prometheus-sta-prometheus     ClusterIP   10.100.159.80    <none>        9090/TCP,8080/TCP            70s
+      stable-kube-state-metrics                 ClusterIP   10.100.221.241   <none>        8080/TCP                     70s
+      stable-prometheus-node-exporter           ClusterIP   10.100.163.172   <none>        9100/TCP                     70s
+
+
+-->kubectl edit svc stable-kube-prometheus-sta-prometheus -n prometheus
+   -->
+   -->change it in type: from Cluster IP to NodePort after changing make sure you save the file
+-->kubectl get svc -n prometheus
+   -->NAME                                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
+      alertmanager-operated                     ClusterIP   None             <none>        9093/TCP,9094/TCP,9094/UDP      6m43s
+      prometheus-operated                       ClusterIP   None             <none>        9090/TCP                        6m43s
+      stable-grafana                            ClusterIP   10.100.245.202   <none>        80/TCP                          6m49s
+      stable-kube-prometheus-sta-alertmanager   ClusterIP   10.100.156.21    <none>        9093/TCP,8080/TCP               6m49s
+      stable-kube-prometheus-sta-operator       ClusterIP   10.100.143.198   <none>        443/TCP                         6m49s
+      stable-kube-prometheus-sta-prometheus     NodePort    10.100.159.80    <none>        9090:31321/TCP,8080:32142/TCP   6m49s
+      stable-kube-state-metrics                 ClusterIP   10.100.221.241   <none>        8080/TCP                        6m49s
+      stable-prometheus-node-exporter           ClusterIP   10.100.163.172   <none>        9100/TCP                        6m49s
+-->kubectl get nodes -o wide
+   -->NAME                            STATUS   ROLES    AGE   VERSION               INTERNAL-IP     EXTERNAL-IP     OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-22-89.ec2.internal   Ready    <none>   17m   v1.29.0-eks-5e0fdde   192.168.22.89   44.203.42.201   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-43-66.ec2.internal   Ready    <none>   17m   v1.29.0-eks-5e0fdde   192.168.43.66   3.236.209.19    Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   contain
+-->Now we can access the prometheus application by giving <node_ip_address>:port_no(3.236.209.19:31321)
+-->kubectl edit svc stable-grafana -n prometheus
+   -->
+
+   -->change it in type: from Cluster IP to LoadBalancer after changing make sure you save the file
+-->kubectl get svc -n prometheus
+   -->NAME                                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
+      alertmanager-operated                     ClusterIP   None             <none>        9093/TCP,9094/TCP,9094/UDP      10m
+      prometheus-operated                       ClusterIP   None             <none>        9090/TCP                        10m
+      stable-grafana                            NodePort    10.100.245.202   <none>        80:32562/TCP                    10m
+      stable-kube-prometheus-sta-alertmanager   ClusterIP   10.100.156.21    <none>        9093/TCP,8080/TCP               10m
+      stable-kube-prometheus-sta-operator       ClusterIP   10.100.143.198   <none>        443/TCP                         10m
+      stable-kube-prometheus-sta-prometheus     NodePort    10.100.159.80    <none>        9090:31321/TCP,8080:32142/TCP   10m
+      stable-kube-state-metrics                 ClusterIP   10.100.221.241   <none>        8080/TCP                        10m
+      stable-prometheus-node-exporter           ClusterIP   10.100.163.172   <none>        9100/TCP                        10m
+-->Now we can access the grafana application by giving <node_ip_address>:port_no(3.236.209.19:32562)
+-->kubectl get secret --namespace prometheus stable-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+   -->prom-operator
+   -->use the above command to get the password and the user name is admin
+-->Inside grafana ->go to home -> dashboards ->New ->import ->15760 as ID and click on load on right side of it -> select prometheus data source->import ->Now we can get everything about the cluster
+-->Now lets create a pod and observe 
+-->vi deploy.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment-np
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app-np
+  template:
+    metadata:
+      labels:
+        app: my-app-np
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-np
+  labels:
+    app: my-app-np
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: my-app-np
+
+-->kubectl apply -f deploy.yml
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+      kubernetes   ClusterIP   10.100.0.1       <none>        443/TCP        38m
+      my-app-np    NodePort    10.100.251.214   <none>        80:32529/TCP   15s
+
+-->kubectl get nodes
+   -->NAME                            STATUS   ROLES    AGE   VERSION               INTERNAL-IP     EXTERNAL-IP     OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-22-89.ec2.internal   Ready    <none>   32m   v1.29.0-eks-5e0fdde   192.168.22.89   44.203.42.201   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-43-66.ec2.internal   Ready    <none>   32m   v1.29.0-eks-5e0fdde   192.168.43.66   3.236.209.19    Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+
+-->Now we can access the application by giving <node_ip_address>:port_no(3.236.209.19:32529)
+-->Now in grafana dashboard and set data source to prometheus and cluster to none and namespace to default and pod as my-depployment ..... , now we can see the metrics of the pod we created just now
+-->Now to create another dashboard ->go to home -> dashboards ->New ->import ->12740 as ID and click on load on right side of it -> select prometheus data source->import ->Now we can get everything about the cluster in different dashboard
+-->kubectl delete ns prometheus
+-->kubectl get pods -n promotheus
+   -->No resources
+-->kubectl delete deploy my-deployment-np
+-->eksctl delete cluster jack  --region us-east-1
+
+
+###########################################################################################################################################################################################
+
+                                                                          ----- Kubernetes Practice-9 -------(Completed)
+                                                                                ----Helm charts----
+
+###########################################################################################################################################################################################
+---------------------------------------------------Helm charts------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name suryapraneeth   --region us-east-1   --node-type t2.small
+
+
+
+-->kubectl get nodes
+   -->NAME                             STATUS   ROLES    AGE     VERSION
+      ip-192-168-20-159.ec2.internal   Ready    <none>   7m      v1.29.0-eks-5e0fdde
+      ip-192-168-54-22.ec2.internal    Ready    <none>   6m55s   v1.29.0-eks-5e0fdde
+
+
+1)helm installation
+-->curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+-->chmod 700 get_helm.sh
+-->./get_helm.shS
+2)helm installation(---------choose this----------)
+-->wget https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+-->tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
+-->mv linux-amd64/helm /usr/local/bin/helm
+-->chmod 777 /usr/local/bin/helm
+-->helm version
+   -->version.BuildInfo{Version:"v3.14.0", GitCommit:"3fc9f4b2638e76f26739cd77c7017139be81d0ea", GitTreeState:"clean", GoVersion:"go1.21.5"}
+
+
+--->git clone https://github.com/Praneeth9630/Kubernetes.git
+->cd Kubernetes
+-->ls
+day-1-installations                          day-14-argocd                 day-4-horizonalScaling      day-7-deployment-updates-recreate-rolling-bluegreen-canary
+day-10-volumes                               day-15-headless-service       day-5-ingress               day-8-worksapce
+day-12-kube-project-includes-config-secrets  day-2-workernodes_components  day-6-Rbac                  day-9-schedules
+day-13-helm                                  day-3-services                day-6-private-registry-ecr  daya-11-monitoring
+
+-->cd day-13-helm
+-->ls
+   -->README.md  dockerfile  main.py  process.doc  requirements.txt
+-->helm create helloworld
+-->ls
+   -->README.md  dockerfile  helloworld  helm-v3.14.0-linux-amd64.tar.gz  linux-amd64  main.py  process.doc  requirements.txt
+-->cd helloworld
+--> ls
+   -->Chart.yaml  charts  templates  values.yaml
+-->cd templates
+-->ls
+   -->NOTES.txt  _helpers.tpl  deployment.yaml  hpa.yaml  ingress.yaml  service.yaml  serviceaccount.yaml  tests
+-->cd ..
+-->vi values.yaml 
+   -->Update service.type from ClusterIP to NodePort
+-->cd ..
+-->helm install firstproject helloworld
+   -->
+NAME: firstproject
+LAST DEPLOYED: Sat Apr 13 08:00:28 2024
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+NOTES:
+1. Get the application URL by running these commands:
+  export NODE_PORT=$(kubectl get --namespace default -o jsonpath="{.spec.ports[0].nodePort}" services firstproject-helloworld)
+  export NODE_IP=$(kubectl get nodes --namespace default -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+
+-->helm list -a
+   -->NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
+      firstproject    default         1               2024-04-13 08:00:28.308755823 +0000 UTC deployed        helloworld-0.1.0        1.16.0  
+-->kubectl get pods
+   -->NAME                                       READY   STATUS    RESTARTS   AGE
+      firstproject-helloworld-6cb9596bcf-49spl   1/1     Running   0          3m29s
+-->kubectl get svc
+   -->NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+      firstproject-helloworld   NodePort    10.100.205.151   <none>        80:30141/TCP   42s
+      kubernetes                ClusterIP   10.100.0.1       <none>        443/TCP        29m
+-->kubectl get nodes -o wide
+   -->NAME                             STATUS   ROLES    AGE   VERSION               INTERNAL-IP      EXTERNAL-IP     OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-46-191.ec2.internal   Ready    <none>   23m   v1.29.0-eks-5e0fdde   192.168.46.191   54.91.93.39     Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-6-81.ec2.internal     Ready    <none>   23m   v1.29.0-eks-5e0fdde   192.168.6.81     54.235.52.160   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+-->Now we can access the  application by giving <node_ip_address>:port_no(54.91.93.39:30141)
+
+
+
+-->cd helloworld
+-->vi values.yml
+   -->in place of repositories: under images change from niginx to veeranarni/hotstar:latest
+-->docker login
+   -->username:praneeth9630
+      password:Praneeth@9630
+-->cd ..
+-->helm install project2 helloworld
+-->helm list -a
+   -->NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
+      firstproject    default         1               2024-04-13 08:00:28.308755823 +0000 UTC deployed        helloworld-0.1.0        1.16.0     
+      project2        default         1               2024-04-13 08:12:56.623802548 +0000 UTC deployed        helloworld-0.1.0        1.16.0 
+-->kubectl get pods
+   -->NAME                                       READY   STATUS             RESTARTS   AGE
+      firstproject-helloworld-6cb9596bcf-49spl   1/1     Running            0          13m
+      project2-helloworld-ddb5688d9-f8b8p        0/1     InvalidImageName   0          77s
+-->now if we change anything in deploy.yml and get the changes in to running pod
+-->helm upgrade project2 helloworld
+-->kubectl get pods
+   -->NAME                                       READY   STATUS             RESTARTS   AGE
+      firstproject-helloworld-6cb9596bcf-49spl   1/1     Running            0          13m
+      project2-helloworld-ddb5688d9-f8b8p        0/1     InvalidImageName   0          2m5s
+   -->here pods do not get created
+-->helm list -a
+   -->NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
+     firstproject    default         1               2024-04-13 08:00:28.308755823 +0000 UTC deployed        helloworld-0.1.0        1.16.0     
+     project2        default         2               2024-04-13 08:12:17.45091673 +0000 UTC  deployed        helloworld-0.1.0        1.16.0 
+-->cd helloworld
+-->cd templates
+  -->vi deployment.yaml
+     -->here we have no use for liveness probe and readiness probe so remove them
+     -->give :set number
+     -->change image to image: "{{ .Values.image.repository }}"
+-->node js application runs on 3000  so it will not access until we change the port
+-->cd ..
+-->vi values.yaml
+   -->change port from 80 to 3000
+-->cd ..
+-->helm upgrade project2 helloworld
+-->helm list -a
+   -->NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
+      firstproject    default         1               2024-04-13 08:00:28.308755823 +0000 UTC deployed        helloworld-0.1.0        1.16.0     
+      project2        default         3               2024-04-13 08:18:12.36745405 +0000 UTC  deployed        helloworld-0.1.0        1.16.0 
+-->kubectl get pods
+   -->NAME                                       READY   STATUS              RESTARTS   AGE
+      firstproject-helloworld-6cb9596bcf-2z9sx   1/1     Running             0          11m
+      project2-helloworld-5c5c5fc545-wppz2       0/1     InvalidImageName    0          5m55s
+      project2-helloworld-67bb66d94b-wgfqr       0/1     ContainerCreating   0          21s
+-->kubectl get pods
+   -->NAME                                       READY   STATUS    RESTARTS   AGE
+      firstproject-helloworld-6cb9596bcf-2z9sx   1/1     Running   0          12m
+      project2-helloworld-67bb66d94b-wgfqr       1/1     Running   0          58s
+-->kubectl get svc
+   -->NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+      firstproject-helloworld   NodePort    10.100.205.151   <none>        80:30141/TCP     13m
+      kubernetes                ClusterIP   10.100.0.1       <none>        443/TCP          42m
+      project2-helloworld       NodePort    10.100.24.28     <none>        3000:32126/TCP   8m25s
+   -->it will show nodeport service with 80:31395, but node js application runs on 3000  so it will not access until we change the port
+-->Now we can acces the application by giving <ip_address_of_node>:32126(54.91.93.39:32126)
+-->helm delete project2
+-->helm delete firstproject
+-->eksctl delete cluster suryapraneeth  --region us-east-1
+
+
+
+
+###########################################################################################################################################################################################
+
+                                                                            ----- Kubernetes Practice-10 -------(Completed) 
+                                                                                    ----Argo CD-----
+
+###########################################################################################################################################################################################
+---------------------------------------------------Argo CD------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name suryapraneeth   --region us-east-1   --node-type t2.small
+
+-->kubectl create namespace argocd
+-->kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+-->kubectl get pods -n argocd
+   -->NAME                                                READY   STATUS    RESTARTS   AGE
+      argocd-application-controller-0                     1/1     Running   0          94s
+      argocd-applicationset-controller-6c8fbc69b5-hxktf   1/1     Running   0          95s
+      argocd-dex-server-b6fc796d7-nwk2f                   1/1     Running   0          95s
+      argocd-notifications-controller-6b66d47b45-pfqln    1/1     Running   0          95s
+      argocd-redis-76748db5f4-m6s65                       1/1     Running   0          94s
+      argocd-repo-server-6f87db89c7-f4b6l                 1/1     Running   0          94s
+      argocd-server-7cbbdb87d7-88r42                      1/1     Running   0          94s
+-->kubectl get svc -n argocd
+   -->NAME                                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+      argocd-applicationset-controller          ClusterIP   10.100.227.243   <none>        7000/TCP,8080/TCP            20s
+      argocd-dex-server                         ClusterIP   10.100.193.98    <none>        5556/TCP,5557/TCP,5558/TCP   20s
+      argocd-metrics                            ClusterIP   10.100.254.68    <none>        8082/TCP                     20s
+      argocd-notifications-controller-metrics   ClusterIP   10.100.186.36    <none>        9001/TCP                     20s
+      argocd-redis                              ClusterIP   10.100.71.56     <none>        6379/TCP                     20s
+      argocd-repo-server                        ClusterIP   10.100.98.241    <none>        8081/TCP,8084/TCP            20s
+      argocd-server                             ClusterIP   10.100.170.166   <none>        80/TCP,443/TCP               20s
+      argocd-server-metrics                     ClusterIP   10.100.172.136   <none>        8083/TCP                     20s
+-->kubectl edit svc argocd-server -n argocd
+   -->change service from cluster_ip to NodePort
+-->kubectl get svc -n argocd
+   -->NAME                                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+      argocd-applicationset-controller          ClusterIP   10.100.227.243   <none>        7000/TCP,8080/TCP            3m4s
+      argocd-dex-server                         ClusterIP   10.100.193.98    <none>        5556/TCP,5557/TCP,5558/TCP   3m4s
+      argocd-metrics                            ClusterIP   10.100.254.68    <none>        8082/TCP                     3m4s
+      argocd-notifications-controller-metrics   ClusterIP   10.100.186.36    <none>        9001/TCP                     3m4s
+      argocd-redis                              ClusterIP   10.100.71.56     <none>        6379/TCP                     3m4s
+      argocd-repo-server                        ClusterIP   10.100.98.241    <none>        8081/TCP,8084/TCP            3m4s
+      argocd-server                             NodePort    10.100.170.166   <none>        80:31409/TCP,443:31429/TCP   3m4s
+      argocd-server-metrics                     ClusterIP   10.100.172.136   <none>        8083/TCP                     3m4s
+-->kubectl get nodes -o wide
+   -->NAME                             STATUS   ROLES    AGE   VERSION               INTERNAL-IP      EXTERNAL-IP    OS-IMAGE         KERNEL-VERSION                  CONTAINER-RUNTIME
+      ip-192-168-25-83.ec2.internal    Ready    <none>   16m   v1.29.0-eks-5e0fdde   192.168.25.83    3.94.128.144   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+      ip-192-168-33-242.ec2.internal   Ready    <none>   15m   v1.29.0-eks-5e0fdde   192.168.33.242   44.200.4.198   Amazon Linux 2   5.10.213-201.855.amzn2.x86_64   containerd://1.7.11
+-->Now we can access the argoCD with <Node_ip>:port_no(3.94.128.144:31409)  but it asks for username and passwd
+   -->configure Security group if you are unable to access
+-->kubectl edit secret argocd-initial-admin-secret -n argocd
+   -->
+apiVersion: v1
+data:
+  password: c1NVNk80NGJqOWFmS2tlZQ==
+kind: Secret
+metadata:
+  creationTimestamp: "2024-04-13T05:38:45Z"
+  name: argocd-initial-admin-secret
+  namespace: argocd
+  resourceVersion: "3577"
+  uid: a9c61746-00ba-43f3-bc5b-24e13d5d3f92
+type: Opaque
+
+   -->copy the password
+-->Now we have to decode the password
+-->echo c1NVNk80NGJqOWFmS2tlZQ== | base64  --decode
+   -->sSU6O44bj9afKkee
+   -->Here c1NVNk80NGJqOWFmS2tlZQ== is the password
+-->Give username admin and password ****** to sign in
+-->Click on new app -> give application name as swiggy, project name as default, 
+                       sync policy as automatic(means when ever there is a change in code it automatically creates),
+                       repository url as https://github.com/Praneeth9630/Kubernetes.git, branch as main, path as day-14-argocd,
+                       select the cluster url as default one(https://kubernetes.default.svc), namespace as default ->click on create
+
+-->kubectl get pods
+   -->NAME                          READY   STATUS    RESTARTS   AGE
+      swiggy-app-57d975564c-mjhd6   1/1     Running   0          62s
+      swiggy-app-57d975564c-stkkt   1/1     Running   0          62s
+-->In argoCD in status it shows its healthy
+-->Now click on the application it shows everything flow like how many services, how many applications, how many deployment files andd also the argocd monitor
+-->If you want information on anythig click on the pod and in it it will also show the manifesto it created in background for argoCD
+-->Now click on sync -> it shows prune   Dry run   Apply only   Force  
+                     ->By default it is running in prune cmd what it prune does is if there is any same application running it will delete and then create
+-->Now click on X to delete , it will ask to type swiggy and the delete
+-->kubectl get pods
+   -->No resources found in default namespace.
+
+
+######## Now lets try approach 2 ##########
+
+-->kubectl get pods
+   -->No resources
+-->Now we have done the manual process and now we will do it by manifesto file
+-->vi argo.yml
+   -->
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp-argo-application
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Praneeth9630/Kubernetes.git
+    targetRevision: HEAD
+    path: day-14-argocd
+  destination: 
+    server: https://kubernetes.default.svc
+    namespace: myapp
+
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+
+    automated:
+      selfHeal: true
+      prune: true
+    
+-->kubectl apply -f argo.yml
+-->Now we can see in argocd the created appplication
+-->kubectl get pods
+   -->No resources
+-->kubectl get pods -n myapp
+   -->NAME                          READY   STATUS    RESTARTS   AGE
+      swiggy-app-57d975564c-8dwvc   1/1     Running   0          48s
+      swiggy-app-57d975564c-kwrqv   1/1     Running   0          48s
+-->Now in github -> deploy.yml change the replicas from 1 to 2 
+-->kubectl get pods -n myapp
+   -->2 pods running but it will take some time
+-->kubectl get svc -n myapp
+   -->
+-->kubectl delete -f argo.yml
+-->kubectl apply -f argo.yml
+-->kubectl delete -f argo.yml
+-->kubectl get pods -n myapp
+   -->still the 2 pods are running 
+-->kubectl get deploy -n myapp
+   -->
+-->eksctl delete cluster suryapraneeth  --region us-east-1
+
+
+
+###########################################################################################################################################################################################
+
+                                                                         ----- Kubernetes Practice-11 -------(incomplete in headless service nslookup) 
+                                                                              -----headless-service-----
+
+###########################################################################################################################################################################################
+---------------------------------------------------headless-service------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->sudo yum install git -y
+-->sudo yum install docker -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl create cluster --name suryapraneeth   --region us-east-1   --node-type t2.small
+
+
+-->git clone https://github.com/Praneeth9630/Kubernetes.git
+-->ls
+   -->Kubernetes
+-->cd Kubernetes
+-->ls
+   -->
+-->cd day-15-headless-service
+-->ls
+   -->secrets.yml  statefulset.yml  stoargeclass.yml
+-->kubectl get pods
+   -->No resources
+-->kubectl apply -f stoargeclass.yml
+-->kubectl get pvc
+   -->
+-->kubectl get pods
+   -->
+-->kubectl apply -f secrets.yml
+-->kubectl apply -f statefulset.yml
+-->kubectl get pods
+   -->NAME      READY   STATUS    RESTARTS   AGE
+      mysql-0   0/1     Pending   0          68s
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+      kubernetes   ClusterIP   10.100.0.1   <none>        443/TCP    13m
+      mysql        ClusterIP   None         <none>        3306/TCP   17s 
+-->Once you have created a Headless Service, you can access the Pods directly using their DNS names or IP addresses.
+-->By setting the clusterIP field to None, Headless Services bypass the traditional load balancing layer and instead provide a direct connection to individual Pods. This is achieved    
+   through the assignment of DNS records for each Pod, allowing you to access them by their DNS names or IP addresses.
+-->kubectl run -i --tty --image busybox:1.28 dns-validate
+   -->create pod and access servcice from pod by using nslookup.
+-->/ # nslookup mysql
+   -->
+
+   -->We are inside the pod 
+   -->nslookup <cluster ip enables servcie name>
+-->exit
+
+
+-->vi svc.yml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-svc
+  labels:
+    app: my-app
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: my-app
+
+-->kubectl apply -f deploy.yml
+-->kubectl get svc
+   -->NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+      kubernetes   ClusterIP   10.100.0.1      <none>        443/TCP   32m
+      my-app-svc   ClusterIP   10.100.224.95   <none>        80/TCP    13s
+-->kubectl get pods
+   -->NAME                             READY   STATUS    RESTARTS   AGE
+      my-deployment-6d7f988cdc-2n882   1/1     Running   0          7s
+      my-deployment-6d7f988cdc-nbl4f   1/1     Running   0          7s
+      my-deployment-6d7f988cdc-z546f   1/1     Running   0          7s
+-->kubectl delete pod dns-validate
+-->kubectl get pods
+   -->
+-->kubectl run -i --tty --image busybox:1.28 dns-validate
+   -->create pod and access servcice from pod by using nslookup.
+-->/ # nslookup my-app-svc
+   -->Server:    10.100.0.10
+      Address 1: 10.100.0.10 kube-dns.kube-system.svc.cluster.local
+
+      Name:      my-app-svc
+      Address 1: 10.100.224.95 my-app-svc.default.svc.cluster.local   
+   --> We get the cluster ip not the individual pod ip
+   -->Here we can see we got cluster ip of service in nslookup(10.100.244.95)
+-->exit
+-->eksctl delete cluster suryapraneeth  --region us-east-1
+
+
+
+###########################################################################################################################################################################################
+
+                                                                  --------- Kubernetes Practice-12 -------(Completed) 
+                                                                    ------- Sonar-qube with jenkins ------
+
+###########################################################################################################################################################################################
+
+--------------------------------------------------- Sonar-qube with jenkins ------------------------------------
+
+-->sudo yum install docker -y
+-->sudo yum install git -y
+-->sudo systemctl start docker
+-->sudo systemctl enable docker
+-->sudo chmod 666 /var/run/docker.sock
+-->sudo usermod -a -G docker ec2-user
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->docker pull sonarqube
+-->docker images
+   -->REPOSITORY   TAG       IMAGE ID       CREATED       SIZE
+      sonarqube    latest    a02c33ab0411   6 weeks ago   785MB
+-->docker run -dt -p 9000:9000 sonarqube
+-->docker ps
+   -->CONTAINER ID   IMAGE       COMMAND                  CREATED          STATUS          PORTS                                       NAMES
+      7dfc95ea727d   sonarqube   "/opt/sonarqube/dock…"   54 seconds ago   Up 50 seconds   0.0.0.0:9000->9000/tcp, :::9000->9000/tcp   nifty_borg
+
+-->Now access the application by giving 54.87.44.49:9000 and give username and password as admin and new passwd as Praneeth@9630
+
+-->click on create a local project ->  give project name -> next -> select Previous version under Define a specific setting for this project
+     -> create project -> select locally -> click on generate -> click on continue -> select maven -> copy the code
+-->git clone https://github.com/Praneeth9630/sample-maven-project.git
+-->yum install maven -y
+-->cd sample-maven-project
+-->ls
+   -->README.md  pom.xml  src
+-->Now we should apply the sonarqube agent to the source code
+-->mvn clean verify sonar:sonar \
+   -Dsonar.projectKey=maven1 \
+   -Dsonar.projectName='maven1' \
+   -Dsonar.host.url=http://54.87.44.49:9000 \
+   -Dsonar.token=sqp_8858e7ed4cbc0750972befaeb8fda13cf11dd1d8
+-->paste the code and press enter
+-->Now go to sonarqube page and refresh it to see the report
+-->Go to issues -> it will shows issues in the code
+-->cd src
+-->ls
+   --> main  test
+-->cd main
+-->cd java
+-->ls
+   -->hello 
+-->cd hello
+-->ls
+   -->Greeter.java  HelloWorld.java
+-->vi HelloWorld.java
+   -->
+package hello;
+
+import org.joda.time.LocalTime;
+import org.joda.time.LocalTime;
+import org.joda.time.LocalTime;
+import org.joda.time.LocalTime;
+
+public class HelloWorld {
+  public static void main(String[] args) {
+    LocalTime currentTime = new LocalTime();
+    System.out.println("The current local time is: " + currentTime);
+    Greeter greeter = new Greeter();
+    System.out.println(greeter.sayHello());
+  }
+}
+
+   -->here we are printing import org.joda.time.LocalTime; multiple times
+-->cd ../../../..
+-->Now again run the sonarqube agent code
+-->mvn clean verify sonar:sonar \
+   -Dsonar.projectKey=maven1 \
+   -Dsonar.projectName='maven1' \
+   -Dsonar.host.url=http://54.87.44.49:9000 \
+   -Dsonar.token=sqp_8858e7ed4cbc0750972befaeb8fda13cf11dd1d8
+-->Now in sonarqube it shows us this Remove this duplicated import issue
+-->Now lets try with jenkins
+
+-->cd ..
+-->sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+   sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+   sudo yum install jenkins -y
+   sudo systemctl enable jenkins
+   sudo systemctl start jenkins
+-->Access the jenkins application by giving <ip_address_of_instance>:8080
+-->cat /var/lib/jenkins/secrets/initialAdminPassword
+   -->fd88990d17f145a3b520bb424a329b91
+==============================================================
+####Optional in sonarqube##########
+-->Go to quality profile -> select : of java -> click on extend -> name as myrules -> click on extend -> click on active more 
+   -> by default my custom are activated if we want we can deactivate them all or individually we can deactivate 
+   ->if we want any rule to deactivate select activate on the rule -> select from major to minor -> click on activate 
+   ->if we want deactivate all select bulk changes and apply for all 
+-->Now go to quality profile -> Under  java we can see sonar way and myrule -> select : of myrule set as a default
+-->Now go to quality gates -> create -> name as myquality -> change the duplicate lines from 3% to 0% -> create 
+-->select : and set myquality as default
+===============================================================
+-->Go to manage jenkins -> plugins -> available plugins -> SonarQube scanner and maven integration -> install 
+-->Now in sonarqube go to administrations -> security -> users -> there is a tockens select : under tockens -> enter tocken name as tocken -> Generate -> copy the tocken   
+-->Now in jenkins -> credentials -> system -> global credentials -> add credentials -> give kind as secret text -> paste the tocken in secret -> id as tocken -> create 
+-->Now in jenkins dashboard -> manage jenkins -> system -> go down and you will find sonarqube servers -> give name as SonarQube -> server url as <ip_address>:9000 
+   -> select server authentication as tocken -> enable environment variables -> save
+-->Now in jenkins dashboard -> manage jenkins -> tools -> add maven path and java path
+   -->mvn -version
+      -->Apache Maven 3.8.4 (Red Hat 3.8.4-3.amzn2023.0.5)
+         Maven home: /usr/share/maven
+         Java version: 17.0.10, vendor: Amazon.com Inc., runtime: /usr/lib/jvm/java-17-amazon-corretto.x86_64
+         Default locale: en, platform encoding: UTF-8
+         OS name: "linux", version: "6.1.82-99.168.amzn2023.x86_64", arch: "amd64", family: "unix"
+-->Now in jenkins dashboard -> New item -> name as sonar and select pipeline -> next
+-->
+pipeline {
+    agent any
+
+    stages {
+        stage('scm') {
+            steps {
+                git branch: 'main', url: 'https://github.com/nareshdevopscloud/project-1-maven-jenkins-CICD-docker-eks-.git'
+            }
+        }
+        stage('clean') {
+            steps {
+                sh 'mvn clean'
+                           
+            }
+        }
+        stage('code quality') {
+            steps {
+                withSonarQubeEnv('SonarQube'){    
+                sh 'mvn install sonar:sonar'
+               
+            }
+        }
+        }
+    }
+}
+
+-->Apply and save -> build now
+   -->It will show build successful
+-->In sonarqube we can see another project created
+-->here in code we should give maven install only or if we give maven clean it converts the code into .class which the sonarqube cannot understand
+-->Now in sonarqube we can see the project 
+
+
+###########################################################################################################################################################################################
+
+                                                                     ------ Kubernetes Practice-13 -------(Completed)
+
+                                                                         -----Jfrog using jenkins-----
+
+###########################################################################################################################################################################################
+
+-------------------------------------Jfrog using jenkins----------------------------------------------------------
+
+-->Create a t2.medium instance
+-->sudo su -
+-->wget https://releases.jfrog.io/artifactory/artifactory-rpms/artifactory-rpms.repo -O jfrog-artifactory-rpms.repo;
+-->sudo mv jfrog-artifactory-rpms.repo /etc/yum.repos.d/;
+-->sudo yum update && sudo yum install jfrog-artifactory-oss
+-->systemctl start artifactory.service
+-->systemctl status artifactory.service
+-->Now we can access the jfrog application by giving 54.175.30.129:8081
+
+-->login with username as admin and passwd as password and set a new password -> skip -> finish
+-->On left side click on applications icon ->go to artifactory -> artifacts 
+-->Now go to administration -> repositories -> click on add repository -> local repository -> here we can access only  maven and if we want docker it needs paid version
+-->click on maven -> give repository key as test -> create local repository
+
+-->Now lets install jenkins
+-->sudo dnf install java-11-amazon-corretto -y
+-->sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+-->sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+-->sudo yum install jenkins -y
+-->sudo systemctl start jenkins
+-->sudo systemctl enable jenkins
+-->yum install git -y
+-->yum install maven -y
+-->Now we can access the jenkins application by giving <IP_address_of_instance>:8080
+-->cat /var/lib/jenkins/secrets/initialAdminPassword
+   -->9a4fdfcbfce54de6a568edaf8691d1e3
+-->Now we can login
+-->Now in the dashboard go to manage jenkins -> plugins -> install Artifactory 4.0.6 -> Go back to the top page
+-->Now in the dashboard go to manage jenkins -> credentials -> system -> global credentials -> add credentials 
+   -> give username as admin and passowrd as jfrog's custom password, id as admin
+-->Now in dash board -> Manage jenkins -> tools -> give maven and java path ( we can find those paths in maven -version cmd)
+-->Now in the dashboard go to manage jenkins -> system -> Under Jfrog check the use the credential plugin-> Add JFrog Platform Instance 
+   -> give instance id as jfrog_id, url path as <IP_address_of_instance>:8081, give username and password -> click on test connection which shows error
+
+-->Go to jfrog -> user managemnt -> users -> add new user -> give username as user1 and password as Praneeth@9630, give admin access, email -> save
+-->Now add user details in Default Deployer Credentials
+-->Now try test connection in manage jenkins -> system
+-->Now in in jenkins under advanced configurations give the same url path of jfrog in jfrog artifactory url -> Now try test connection which shows connected -> apply and save it
+   -->Found JFrog Artifactory 7.77.9 at http://3.92.84.227:8082/artifactory
+      JFrog Distribution not found at http://3.92.84.227:8082/distribution
+
+-->Now write a pipeline with the name of jfrog 
+   -->
+pipeline {
+    agent any
+
+    stages {
+        stage('stage-1') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Praneeth9630/project-1-maven-jenkins-CICD-docker-eks-.git'
+            }
+        }
+   
+        stage('clean') {
+            steps {
+              sh  'mvn clean'
+            }
+        }
+        
+        stage('test') {
+            steps {
+              sh  'mvn test'
+            }
+        }
+        stage('install') {
+            steps {
+               sh  'mvn install'
+            }
+        }
+        
+        stage('Push artifacts into artifactory') {
+            steps {
+              rtUpload (
+                serverId: 'jfrog_id',
+                spec: '''{
+                      "files": [
+                        {
+                          "pattern": "*.war",
+                           "target": "test/"
+                        }
+                    ]
+                }'''
+              )
+          }
+        }
+    }
+}
+
+-->Apply and save it ->click build now
+-->Now in Jrog -> artifacts -> we can find the web var file under test repository
+
+
+
+###########################################################################################################################################################################################
+
+                                                                             ----- Kubernetes DAY-14 -------(Completed)
+                                                                               ----ELK AND EFK Stack------  
+
+###########################################################################################################################################################################################
+
+-------------------------------------------------------------------------------------------------------------------
+Elasticsearch is a scalable and distributed search engine that is commonly used to store large amounts of log data. 
+              It is a NoSQL database. Its primary function is to store and retrieve logs from fluent bit.
+
+Fluent Bit is a logging and metrics processor and forwarder that is extremely fast, lightweight, and highly scalable. 
+           Because of its performance-oriented design, it is simple to collect events from various sources and ship them to various destinations without complexity.
+
+Kibana is a graphical user interface (GUI) tool for data visualization, querying, and dashboards. 
+       It is a query engine that lets you explore your log data through a web interface, create visualizations for event logs, and filter data to detect problems. 
+       Kibana is being used to query elasticsearch indexed data.
+-------------------------------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------------------------------
+Why do we need EFK Stack?
+
+->Using the EFK stack in your Kubernetes cluster can make it much easier to collect, store, and analyze log data from all the pods and nodes in your cluster, making it more 
+  manageable and  more accessible for different users.
+->The kubectl logs command is useful for looking at logs from individual pods, but it can quickly become unwieldy when you have a large number of pods running in your cluster.
+->With the EFK stack, you can collect logs from all the nodes and pods in your cluster and store them in a central location. It allows you to quickly troubleshoot issues and identify 
+  patterns in your log data.
+->It also enables people who are not familiar with using the command line to check logs and keep track of the Kubernetes cluster and the applications that are deployed on it.
+->It also allows you to easily create alerts, dashboards, and create monitoring and reporting capabilities that can give you an overview of your system’s health and performance, and It 
+  will notify you in real-time if something goes wrong.
+-------------------------------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------------------------------
+In this tutorial, we will be deploying EFK components as follows:
+
+->Elasticsearch is deployed as statefulset as it stores the log data.
+->Kibana is deployed as deployment and connects to elasticsearch service endpoint.
+->Fluent-bit is deployed as a daemonset to gather the container logs from every node. It connects to the Elasticsearch service endpoint to forward the logs.
+-------------------------------------------------------------------------------------------------------------------
+
+-->Create a t2.medium instance and the run these cmds
+-->Now to Setup Kubernetes on Amazon EKS
+   -->1. Setup kubectl
+      2. Setup eksctl 
+      3. Create an IAM Role and attache it to EC2 instance
+      4. Create your cluster and nodes
+-->curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+-->chmod +x ./kubectl 
+-->sudo mv ./kubectl /usr/local/bin/kubectl
+-->Now as already kubectl is already set and we will attach a admin iam role to the instance for now
+-->After attaching the role now we should set up eksctl
+-->sudo su -
+-->curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+-->sudo mv /tmp/eksctl /usr/local/bin
+-->eksctl version
+   -->0.176.0
+-->vi clusterconfig.yaml
+   -->
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: "uat-dev"
+  region: "ap-south-1"
+  version: "1.23"
+nodeGroups:
+  - name: ng-1
+    instanceType: t3.medium
+    desiredCapacity: 3
+    volumeSize: 30
+    ssh:
+      publicKeyName: Mumbai_1
+   
+   -->Here public key should be in ap_south
+-->eksctl create cluster -f clusterconfig.yaml
+
+-->Visit EKS cluster console and find the IAM role attached to the cluster -> add administer level access to it
+-->Open any one of node — go to security — click on IAM role — Add administrator access permission to the existing policy.
+-->Change the cluser security groups inbond rule to all traffic. source is anywere-ipv4
+-->Now install Helm
+  -->wget https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+  -->tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
+  -->sudo mv linux-amd64/helm /usr/local/bin/helm
+  -->chmod 777 /usr/local/bin/helm
+-->Add helm repo to the cluster and update it.
+  -->helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
+  -->helm repo update
+-->Install this helm repo to the cluster.
+  -->helm upgrade --install aws-ebs-csi-driver --namespace kube-system aws-ebs-csi-driver/aws-ebs-csi-driver
+     -->Release "aws-ebs-csi-driver" does not exist. Installing it now.
+        NAME: aws-ebs-csi-driver
+        LAST DEPLOYED: Mon May  6 08:17:28 2024
+        NAMESPACE: kube-system
+        STATUS: deployed
+        REVISION: 1
+        NOTES:
+        To verify that aws-ebs-csi-driver has started, run:
+
+            kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver,app.kubernetes.io/instance=aws-ebs-csi-driver"
+
+        NOTE: The [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter) controller and CRDs will no longer be installed as part of this chart and moving forward will be 
+        a prerequisite of using the snap shotting functionality.
+-->Now Create a namespace
+-->vi custom-ns.yaml
+   -->
+kind: Namespace
+apiVersion: v1
+metadata:
+ name: kube-logging
+
+-->kubectl apply -f custom-ns.yaml
+-->Create StorageClass named “ebs-storage“
+-->vi storage-cls.yaml
+   -->
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+ name: ebs-storage
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+parameters:
+ type: gp2
+
+-->kubectl apply -f storage-cls.yaml
+-->vi elsaticsearch-sts.yaml
+   -->
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: es-cluster
+  namespace: kube-logging
+spec:
+  serviceName: elasticsearch
+  replicas: 3
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          ports:
+            - containerPort: 9200
+              name: rest
+              protocol: TCP
+            - containerPort: 9300
+              name: inter-node
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+          env:
+            - name: cluster.name
+              value: k8s-logs
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: discovery.seed_hosts
+              value: "es-cluster-0.elasticsearch,es-cluster-1.elasticsearch,es-cluster-2.elasticsearch"
+            - name: cluster.initial_master_nodes
+              value: "es-cluster-0,es-cluster-1,es-cluster-2"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+      initContainers:
+        - name: fix-permissions
+          image: busybox
+          command: ["sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+        - name: increase-vm-max-map
+          image: busybox
+          command: ["sysctl", "-w", "vm.max_map_count=262144"]
+          securityContext:
+            privileged: true
+        - name: increase-fd-ulimit
+          image: busybox
+          command: ["sh", "-c", "ulimit -n 65536"]
+          securityContext:
+            privileged: true
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app: elasticsearch
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: ebs-storage
+        resources:
+          requests:
+            storage: 10Gi
+
+-->kubectl apply -f elsaticsearch-sts.yaml
+-->Now we create a headless service for the statefulset
+   -->Now Let’s set up elasticsearch, a Kubernetes headless service that will define a DNS domain for pods.
+   -->A headless service lacks load balancing and has no static IP address.
+   -->Let’s create a Headless Service for an elasticsearch
+-->vi elasticsearch-svc.yaml
+   -->
+kind: Service
+apiVersion: v1
+metadata:
+  name: elasticsearch
+  namespace: kube-logging
+  labels:
+    app: elasticsearch
+spec:
+  selector:
+    app: elasticsearch
+  clusterIP: None
+  ports:
+    - port: 9200
+      name: rest
+    - port: 9300
+      name: inter-node
+
+-->kubectl apply -f elasticsearch-svc.yaml
+-->kubectl get pod -n kube-logging
+   -->NAME           READY   STATUS    RESTARTS   AGE
+      es-cluster-0   1/1     Running   0          3m34s
+      es-cluster-1   1/1     Running   0          2m41s
+      es-cluster-2   1/1     Running   0          109s
+
+-->"Creating the Kibana Deployment"
+    Kibana can be set up as a simple Kubernetes deployment. 
+    If you look at the Kibana deployment manifest file, 
+    you’ll notice that we have an env variable ELASTICSEARCH_URL defined to configure the Elasticsearch cluster endpoint. 
+    Kibana communicates to elasticsearch via the endpoint URL.
+-->vi kibana-deploy.yaml
+   -->
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: kube-logging
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:7.2.0
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+            requests:
+              cpu: 700m
+              memory: 1Gi
+          env:
+            - name: ELASTICSEARCH_URL
+              value: http://elasticsearch:9200
+          ports:
+            - containerPort: 5601
+
+-->kubectl apply -f kibana-deploy.yaml
+-->"Creating the Kibana Service":
+    Let’s make a NodePort service to access the Kibana UI via the node IP address.
+    For demonstration purposes or testing, however,
+    it’s not considered a best practice for actual production use.
+    The Kubernetes ingress with a ClusterIP service is a more secure and way to expose
+    the Kibana UI.
+-->vi kibana-svc.yaml
+   -->
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: kube-logging
+  labels:
+    app: kibana
+spec:
+  type: NodePort
+  ports:
+    - port: 5601
+  selector:
+    app: kibana
+
+-->kubectl apply -f kibana-svc.yaml
+-->Now Setup FluentBit
+-->vi fluentbit-cr.yaml
+   -->
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluent-bit
+  labels:
+    app: fluent-bit
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - namespaces
+    verbs: ["get", "list", "watch"]
+
+-->kubectl apply -f fluentbit-cr.yaml
+
+-->"Creating the Fluent-bit Role Binding"
+    ClusterRoleBinding to bind this ClusterRole to Service Account, 
+    which will give that ServiceAccount the permissions defined in the ClusterRole.
+
+-->vi fluentbit-crb.yaml
+   -->
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: fluent-bit
+roleRef:
+  kind: ClusterRole
+  name: fluent-bit
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: fluent-bit
+    namespace: kube-logging
+
+-->kubectl apply -f fluentbit-crb.yaml
+
+-->"Creating the Fluent-bit Service Account"
+    A Service Account is a Kubernetes resource that allows you to control access to the
+    Kubernetes API
+    for a set of pods, which determines what the pods are allowed to do.
+    You can attach roles and role bindings to the service account,
+    to give it specific permissions to access the Kubernetes API,
+    this is done through Kubernetes Role and Rolebinding resources.
+-->vi fluentbit-sa.yaml
+   -->
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluent-bit
+  namespace: kube-logging
+  labels:
+    app: fluent-bit
+
+-->kubectl apply -f fluentbit-sa.yaml
+
+-->"Creating the Fluent-bit ConfigMap"
+    This ConfigMap is used to configure a Fluent-bit pod, 
+    by specifying the ConfigMap field in the pod definition. 
+    This way when the pod starts it will use the configurations defined in the configmap. 
+    ConfigMap can be updates and changes, 
+    it will reflect in the pod without the need to recreate the pod itself.
+-->vi fluentbit-cm.yaml
+   -->
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: kube-logging
+  labels:
+    k8s-app: fluent-bit
+data:
+  # Configuration files: server, input, filters and output
+  # ======================================================
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         1
+        Log_Level     info
+        Daemon        off
+        Parsers_File  parsers.conf
+        HTTP_Server   On
+        HTTP_Listen   0.0.0.0
+        HTTP_Port     2020
+    @INCLUDE input-kubernetes.conf
+    @INCLUDE filter-kubernetes.conf
+    @INCLUDE output-elasticsearch.conf
+  input-kubernetes.conf: |
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        Parser            docker
+        DB                /var/log/flb_kube.db
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+  filter-kubernetes.conf: |
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+        Kube_Tag_Prefix     kube.var.log.containers.
+        Merge_Log           On
+        Merge_Log_Key       log_processed
+        K8S-Logging.Parser  On
+        K8S-Logging.Exclude Off
+  output-elasticsearch.conf: |
+    [OUTPUT]
+        Name            es
+        Match           *
+        Host            ${FLUENT_ELASTICSEARCH_HOST}
+        Port            ${FLUENT_ELASTICSEARCH_PORT}
+        Logstash_Format On
+        Replace_Dots    On
+        Retry_Limit     False
+  parsers.conf: |
+    [PARSER]
+        Name   apache
+        Format regex
+        Regex  ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
+        Time_Key time
+        Time_Format %d/%b/%Y:%H:%M:%S %z
+    [PARSER]
+        Name   apache2
+        Format regex
+        Regex  ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^ ]*) +\S*)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
+        Time_Key time
+        Time_Format %d/%b/%Y:%H:%M:%S %z
+    [PARSER]
+        Name   apache_error
+        Format regex
+        Regex  ^\[[^ ]* (?<time>[^\]]*)\] \[(?<level>[^\]]*)\](?: \[pid (?<pid>[^\]]*)\])?( \[client (?<client>[^\]]*)\])? (?<message>.*)$
+    [PARSER]
+        Name   nginx
+        Format regex
+        Regex ^(?<remote>[^ ]*) (?<host>[^ ]*) (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
+        Time_Key time
+        Time_Format %d/%b/%Y:%H:%M:%S %z
+    [PARSER]
+        Name   json
+        Format json
+        Time_Key time
+        Time_Format %d/%b/%Y:%H:%M:%S %z
+    [PARSER]
+        Name        docker
+        Format      json
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep   On
+    [PARSER]
+        Name        syslog
+        Format      regex
+        Regex       ^\<(?<pri>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+        Time_Key    time
+        Time_Format %b %d %H:%M:%S
+
+-->kubectl apply -f fluentbit-cm.yaml
+
+-->Now create a Daemon set
+-->vi fluentbit-ds.yaml
+   -->
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: kube-logging
+  labels:
+    k8s-app: fluent-bit-logging
+    version: v1
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluent-bit-logging
+  template:
+    metadata:
+      labels:
+        k8s-app: fluent-bit-logging
+        version: v1
+        kubernetes.io/cluster-service: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2020"
+        prometheus.io/path: /api/v1/metrics/prometheus
+    spec:
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:1.3.11
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 2020
+          env:
+            - name: FLUENT_ELASTICSEARCH_HOST
+              value: "elasticsearch"
+            - name: FLUENT_ELASTICSEARCH_PORT
+              value: "9200"
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc/
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: fluent-bit-config
+          configMap:
+            name: fluent-bit-config
+      serviceAccountName: fluent-bit
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - operator: "Exists"
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "NoSchedule"
+
+-->kubectl apply -f fluentbit-ds.yaml
+-->Now Kbana access
+   -->Then take node ip and nodeport of kibana svc
+-->kubectl get pods -n kube-logging
+   -->NAME                     READY   STATUS    RESTARTS   AGE
+      es-cluster-0             1/1     Running   0          24m
+      es-cluster-1             1/1     Running   0          24m
+      es-cluster-2             1/1     Running   0          23m
+      fluent-bit-bch6n         1/1     Running   0          13s
+      fluent-bit-g6tqn         1/1     Running   0          13s
+      fluent-bit-pwq2w         1/1     Running   0          13s
+      kibana-9cbd998d7-pb4pq   1/1     Running   0          18m
+-->kubectl get svc -n kube-logging
+   -->NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
+      elasticsearch   ClusterIP   None            <none>        9200/TCP,9300/TCP   24m
+      kibana          NodePort    10.100.37.203   <none>        5601:30278/TCP      16m
+-->Now login with Node_ip and port_n0 -> 3.108.226.159:30278
+-->Now Create the index pattern in Kibana dashboard then logs will be shown in Kibana.
+   -->click on explore on my own -> Go to management -> Under Kibana select Index Patterns -> click on create index pattern -> give index pattern as * -> click on next step
+   -->in step 2 select @timestamp -> click on create index pattern -> Now it will show us to the logs parameters 
+-->Now go to discover -> Now it will show us the logs
+-->Now You can create any Deployments we can see the pods logs information
+-->vi existingspace.yaml
+   -->
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  namespace: kube-logging
+  labels:
+      app: webapp
+      type: front-end
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+-->kubectl apply -f existingspace.yaml
+-->Now we can see the pods logs information
+
+-->eksctl delete cluster uat-dev  --region ap-south-1
+
+###########################################################################################################################################################################################
+
+                                                                             ----- Kubernetes DAY-15 -------(Completed)
+                                                                                   ----Probes------  
+
+###########################################################################################################################################################################################
+
+--------------------------------------------------------------------------------
+->Kubernetes provides probes -health checks- to monitor and act on the state or condition of the pods, to make sure only healthy pods serve traffic.
+->Kubelet is the responsible component for running the health checks, updating the API Server with the relevant information.
+
+Types of Probes:
+Kubernetes have three types probes for health check of pods.
+ 1)Liveness
+ 2)Readiness
+ 3)Startup
+--------------------------------------------------------------------------------
+Liveness Probe:
+->The kubelet uses liveness probes to know when to restart a container. For example, liveness probes could catch a deadlock, where an application is running, but unable to make progress.
+->Restarting a container in such a state can help to make the application more available despite bugs.
+--------------------------------------------------------------------------------
+Readiness Probe:
+->The kubelet uses readiness probes to know when a container is ready to start accepting traffic.
+->A Pod is considered ready when all of its containers are ready. One use of this signal is to control which Pods are used as backends for Services. When a Pod is not ready, it is removed 
+  from Service load balancers.
+--------------------------------------------------------------------------------
+Startup Probe:
+->The kubelet uses startup probes to know when a container application has started. If such a probe is configured, it disables liveness and readiness checks until it succeeds, making sure 
+  those probes don’t interfere with the application startup.
+->This can be used to adopt liveness checks on slow starting containers, avoiding them getting killed by the kubelet before they are up and running.
+--------------------------------------------------------------------------------
+
+
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+
+
+###########################################################################################################################################################################################
+
