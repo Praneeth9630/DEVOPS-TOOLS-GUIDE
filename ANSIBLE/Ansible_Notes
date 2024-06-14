@@ -1,0 +1,912 @@
+###########################################################################################################################################################################################
+
+                                                                       ----- Ansible DAY-1 -------
+
+###########################################################################################################################################################################################
+
+-----------------------------------------------------------------------------------------
+#What is Ansible?
+Ansible is an open source, command-line IT automation software application written in Python. It can configure systems, deploy software, and orchestrate advanced workflows to support application deployment, system updates, and more. Ansible's main strengths are simplicity and ease of use.
+
+#How Ansible works?
+In Ansible, there are two categories of computers: the control node and managed nodes. The control node is a computer that runs Ansible. There must be at least one control node, although a backup control node may also exist. A managed node is any device being managed by the control node.
+sudo yum update -y
+
+
+# Inventory
+  Manifesto file: Here we can add all target IP's
+
+#1)Adhoc commands
+ 2)Modules
+ 3)Playbook
+ 4)Roles
+
+# Default file path of inventory file is /etc/ansible/hosts
+
+###### Ansible ad-hoc commands ##################
+
+ 
+ansible -i inventory all -a "yum install git -y" -b
+
+ansible -i inventory all -a "yum install maven -y" -b
+
+ansible -i inventory all -a "git --version" -b
+
+ansible -i inventory all -a "touch file100" -b
+
+
+if we can configure inventory file in  default path sudo vi /etc/ansible/hosts
+
+command will be note: no need to mention inventory along command it will take from default path 
+
+ansible all -a "yum install git -y" -b
+
+
+####### Ansible Module ##########
+
+key will pair 
+
+----ping module-------
+ansible -i inventory all -m ping 
+
+-----stat module ----
+ansible -i inventory all -m stat -a "path=/var/www/html"
+
+------yum or apt module -----
+
+----------user----------
+
+ansible -i inventory all -m user -a "name=naresh" -b
+
+-----------setup--------
+ansible -i inventory all -m setup
+
+---------------file------------
+ansible -i inventory all -m file -a "name=demo state=touch"
+
+---------------copy-------------
+ansible -i inventory all -m copy -a "src=file1  dest=~"
+----------------------
+
+
+(basic state's
+name = (httpd install)
+               state=latest
+               state=present
+               state=absent )
+
+ansible all -m yum -a "name=httpd state=latest" -b
+ansible all -m yum -a "name=httpd state=present" -b
+ansible all -m yum -a "name=httpd state=absent" -b
+
+(name = systemctl or service              
+               state=stopped
+               state= started
+               state=restrted
+               state= absent)
+
+ansible -i inventory all -m service -a "name=httpd state=latest" -b     #to instal service
+
+
+ansible -i inventory all -m service -a "name=httpd state=started" -b     #to start service
+
+ansible -i inventory all -m service -a "name=httpd state=stopped" -b     #to stop service
+
+ansible -i inventory all -m service -a "name=httpd state=absent" -b     #to uninstall service
+
+
+
+ansible -i inventory all -m service -a "name=httpd state=restarted" -b     #to start service
+
+
+# ansible -i inventory all -a "yum install git -y" -b
+ ->Need to give -i inventory for file
+
+# ansible all -a "yum install tree -y" -b
+ ->It will take default inventory path
+-----------------------------------------------------------------------------------------
+
+-->Create a t2.micro instance and name it ansible
+-->Create a t2.micro instance and name it node1 and have seperate keypair for this instance
+-->Now log in to ansible instance
+-->ssh-keygen
+-->cd .ssh
+-->ls
+   -->
+-->cat id_rsa.pub
+   -->
+   -->copy the key
+-->Now log in to nod1 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->copy the private ip of node1
+-->Go to the ansible instance
+-->cd ..
+-->ssh <IP_address>
+-->Now we are connected to the node1 instance through ansible
+-->sudo yum install ansible -y
+-->python3 --version
+   -->
+-->ansible --version
+-->ansible -i inventory all -a "yum install git -y" -b
+   -->It will show error because we havent configured the master node here
+-->vi inventory
+   --><Private_IP_of_node1>
+-->ansible -i inventory all -a "yum install git -y" 
+   -->It will show error beacause we have to run this cmd with super user
+   -->here in this cmd if we add -b then this cmd will become root
+-->-->ansible -i inventory all -a "yum install git -y" -b
+   -->It shows successful
+-->Now go to node1 instance
+-->git --version
+   -->
+   -->it is installed
+-->Now go to ansible instance
+-->ls
+   -->inventory
+-->rm -rf inventory
+-->ansible -i inventory all -a "yum install git -y" -b
+   -->It will show error as no inventory is found
+-->Now lets try the dafault path of inventory
+-->sudo vi /etc/ansible/hosts
+   --><Private_IP_of_node1>
+-->Now we need not give inventory in the ansible cmd
+-->ansible all -a "yum install tree -y" -b
+-->Now go to node1 instance
+-->tree --version
+   -->
+-->Now go to ansible instance
+-->ansible all -a "touch file100" -b
+-->Now go to node1 instance
+-->ls
+   -->file100
+-->Now go to ansible instance
+-->ansible all -m ping
+   -->
+-->ansible all -m file -a "name=demo state=touch"
+-->Now go to node1 instance
+-->ls
+   -->demo  file100
+-->Now go to ansible instance
+-->ansible all -m yum -a "name=httpd state=latest" -b
+-->Now go to node1 instance
+-->systemctl status httpd
+   -->it shows inactive
+
+-->Now go to ansible instance
+-->ansible all -m yum -a "name=httpd state=absent" -b
+   -->We have unistalled the httpd service
+-->ansible all -m yum -a "name=httpd state=latest" -b
+-->ansible all -m service -a "name=httpd state=started" -b
+-->Now go to node1 instance
+-->systemctl status httpd
+   -->it shows active
+
+-->Now go to ansible instance
+-->ansible all -m service -a "name=httpd state=stopped" -b
+-->Now go to node1 instance
+-->systemctl status httpd
+   -->it shows inactive
+-->Now go to ansible instance
+-->ansible all -m yum -a "name=git state=absent" -b
+-->ansible all -m yum -a "name=git state=latest" -b
+
+-->ansible all -m user -a "name=naresh" -b
+-->Now go to node1 instance
+-->cat etc/passwd
+   -->
+
+
+
+
+
+###########################################################################################################################################################################################
+
+                                                                       ----- Ansible DAY-2 -------
+
+###########################################################################################################################################################################################
+
+-----------------------------------------------------------------------------------------
+----------------------Ansible playbook----------------------------
+Ansible Playbooks are lists of tasks that automatically execute for your specified inventory or groups of hosts. One or more Ansible tasks can be combined to make a play—an ordered grouping of tasks mapped to specific hosts—and tasks are executed in the order in which they are written
+
+# to execute plyabook
+ansible-playbook -i inventory test-playbook.yaml
+
+#TAGS CMD'S
+SINGLE TAG     :  ansible-playbook name.yml --tags a
+MULTI TAG      :  ansible-playbook name.yml --tags b,c
+SKIP TAG       :  ansible-playbook name.yml --skip-tags "c"
+MULTI SKIP TAGS:  ansible-playbook name.yml --skip-tags "c,d"
+-----------------------------------------------------------------------------------------
+
+-->Create a t2.micro instance and name it ansible
+-->Create a t2.micro instance and name it node1 
+-->Create a t2.micro instance and name it node2 
+-->Now log in to ansible instance
+-->sudo su -
+-->yum install ansible -y
+-->python3 --version
+   -->
+-->exit
+-->ssh-keygen
+-->cd .ssh
+-->ls
+   -->
+-->cat id_rsa.pub
+   -->
+   -->copy the key
+-->Now log in to nod1 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->Now log in to nod2 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->copy the private ip of node1 and node2
+-->Go to the ansible instance
+-->cd ..
+-->sudo vi /etc/ansible/hosts
+   -->
+
+   -->post the private ip's here
+-->Now we are connected to the node1 and node2 instance through ansible
+-->ansible all -m ping
+   -->it will show one successful and other as failure
+-->ssh <private_ip_of_failed>
+   -->
+-->Create a t2.micro instance and name it node3 
+-->Now log in to nod1 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->Now log in to node3 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->copy the private ip of node3
+-->Go to the ansible instance
+-->cd ..
+-->sudo vi /etc/ansible/hosts
+   -->
+
+   -->post the private ip's here
+-->Now we are connected to the node3 instance through ansible
+-->Go to the ansible instance
+-->ansible all -m ping
+   -->it will show two successful and other one as failure
+-->So instead of doing this we can use host key verification put false
+-->sudo vi /etc/ansible/ansible.cfg
+   -->
+[defaults]
+host_key_checking = False
+
+-->ansible all -m ping
+   -->it will show all three successful
+-->vi first.yml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install httpd software
+      yum:
+        name: httpd
+        state: latest
+    - name: start web server
+      service:
+        name: httpd
+        state: started
+
+-->ansible-playbook first.yml
+-->Now go to node1 instance
+-->cd ../..
+-->systemctl status httpd
+   -->It will show active
+-->Go to the ansible instance
+-->Now lets divide the IP's in to groups
+-->sudo vi /etc/ansible/hosts
+   -->[web]
+      <ip_of_node1>
+      [test]
+      <ip_of_node2>
+      [prod]
+      <ip_of_node3>
+
+-->vi first.yml
+   -->
+---
+- name: first playbook
+  hosts: test
+  become: yes
+  tasks:
+      tags: a
+    - name: install httpd software
+      yum:
+        name: httpd
+        state: latest
+      tags: b
+    - name: start web server
+      service:
+        name: httpd
+        state: started
+
+-->ansible-playbook first.yml
+-->Now here it only creates the httpd server in the test group IP address
+-->vi tag1.yml
+   -->
+- name: first playbook
+  hosts: all
+  tasks:
+    - name: installing git
+      yum:
+       name: git
+       state: present
+      tags: a
+    - name: installing httpd
+      yum:
+        name: maven
+        state: present
+      tags: b
+    - name: create user
+      user:
+        name: test
+        state: present
+      tags: c 
+
+-->ansible-playbook tag1.yml --tags a
+-->Now it will only install git
+
+-->vi deploy.yml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install httpd software
+      yum:
+        name: httpd
+        state: latest
+    - name: start web server
+      service:
+        name: httpd   
+        state: started
+    - name: copying the files
+      copy:
+        src: index.html                    # Need to create index.html it will copy and paste into dest
+        dest: /var/www/html/index.html
+    - name: restart server
+      service:
+        name: httpd
+        state: restarted
+
+-->ansible-playbook deploy.yml
+-->It will fail at 3rd stage as we havent created a index.html file for it to copy
+-->vi index.html
+   -->
+<body>
+
+<h1 style="background-color:powderblue;">This is a heading</h1>
+<p style="background-color:tomato;">This is a paragraph.</p>
+
+</body>
+
+->ansible-playbook deploy.yml
+-->Now copy the any node public ip and give it in google to acces the web application
+
+-->vi second.yml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  vars:
+    - a: httpd
+    - b: present
+    - c: started
+    - d: restarted
+    
+
+  tasks:
+    - name: install httpd software
+      yum:
+        name: "{{a}}"
+        state: "{{b}}"
+    - name: start web server
+      service:
+        name: "{{a}}"
+        state: "{{c}}"
+    - name: copying the files
+      copy:
+        src: index.html
+        dest: /var/www/html/index.html
+    - name: restart server
+      service:
+        name: "{{a}}"
+        state: "{{d}}"
+-->ansible-playbook second.yml
+
+
+###########################################################################################################################################################################################
+
+                                                                       ----- Ansible DAY-3 -------
+
+###########################################################################################################################################################################################
+
+-->Create a t2.micro instance and name it ansible
+-->Create a t2.micro instance and name it node1 
+-->Create a t2.micro instance and name it node2 
+-->Now log in to ansible instance
+-->sudo su -
+-->yum install ansible -y
+-->yum install git -y
+-->exit
+-->ssh-keygen
+-->cd .ssh
+-->ls
+   -->
+-->cat id_rsa.pub
+   -->
+   -->copy the key
+-->Now log in to nod1 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->Now log in to nod2 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->copy the private ip of node1 and node2
+-->Go to the ansible instance
+-->cd ..
+-->sudo vi /etc/ansible/hosts
+   -->
+
+   -->post the private ip's here
+-->Now we are connected to the node1 and node2 instance through ansible
+-->sudo vi /etc/ansible/ansible.cfg
+   -->
+[defaults]
+host_key_checking = False
+
+-->ansible all -m ping
+-->vi handler.yml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install httpd software
+      yum:
+        name: httpd
+        state: latest
+    - name: start web server
+      service:
+        name: httpd
+        state: started
+    - name: copying the files
+      copy:
+        src: index.html
+        dest: /var/www/html/index.html
+      notify: Restart web server
+  handlers:
+    - name: Restart web server
+      service:
+        name: httpd
+        state: restarted
+
+-->vi index.html
+   -->
+<body>
+
+<h1 style="background-color:powderblue;">This is a heading</h1>
+<p style="background-color:tomato;">This is a paragraph.</p>
+
+</body>
+
+-->ansible-playbook handler.yml
+-->vi first.yml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install httpd software
+      yum:
+        name: httpd
+        state: latest
+    - name: start web server
+      service:
+        name: httpd
+        state: started
+    - name: restart web server
+      service:
+        name: httpd
+        state: restarted
+
+-->ansible-playbook first.yml
+-->vi first.yml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install httpd software
+      yum:
+        name: httpd
+        state: latest
+    - name: install git
+      yum:
+        name: git
+        state: latest
+    - name: start web server
+      service:
+        name: httpd
+        state: started
+    - name: restart web server
+      service:
+        name: httpd
+        state: restarted
+
+-->ansible-playbook first.yml
+-->here when we are installing git the httpd server restarts but here we want it to restart only if there are any changes in the server
+-->So here we use handlers to moniter the source code 
+-->ansible-playbook handler.yml
+   -->Now we  can observe there is no restart block
+-->Now lets make changes to file and see the result
+-->vi index.html
+   -->
+<body>
+
+<h1 style="background-color:powderblue;">This is a heading</h1>
+<p style="background-color:tomato;">This is a paragraph.</p>
+
+<h1 style="background-color:powderblue;">This is a heading</h1>
+<p style="background-color:tomato;">This is a paragraph.</p>
+
+</body>
+
+-->ansible-playbook handler.yml
+   -->Now we  can observe there is a restart block
+-->Now change the name of handler
+-->vi handler.yml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install httpd software
+      yum:
+        name: httpd
+        state: latest
+    - name: start web server
+      service:
+        name: httpd
+        state: started
+    - name: copying the files
+      copy:
+        src: index.html
+        dest: /var/www/html/index.html
+      notify: Restart web server
+  handlers:
+    - name: Restart web
+      service:
+        name: httpd
+        state: restarted
+
+-->ansible-playbook handler.yml
+-->It will run as handler is not triggered now so now we should change the source code and try
+-->vi index.html
+   -->
+<body>
+
+<h1 style="background-color:powderblue;">This is a heading</h1>
+<p style="background-color:tomato;">This is a paragraph.</p>
+
+<h1 style="background-color:powderblue;">This is a heading</h1>
+<p style="background-color:tomato;">This is a paragraph.</p>
+
+<h1 style="background-color:powderblue;">This is a heading</h1>
+<p style="background-color:tomato;">This is a paragraph.</p>
+
+</body>
+
+-->ansible-playbook handler.yml
+   -->It will show error while copy files as handler is triggered now
+
+
+-->vi loops.yml
+   -->
+---
+- name: loopr playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install multiple softwares
+      yum:
+        name: "{{item}}"
+        state: latest
+      with_items:
+        - git
+        - tree
+        - httpd
+
+-->ansible-playbook loops.yml
+-->vi multiloop.yml
+   -->
+---
+- name: loopr playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install multiple softwares
+      yum:
+        name: "{{item.x}}"
+        state: "{{item.y}}"
+      with_items:
+        - {x: httpd, y: latest}
+        - {x: git, y: absent}
+        - {x: tree, y: latest}
+    - name: start httpd server
+      service:
+        name: "{{item.x}}"
+        state: "{{item.z}}"
+      with_items:
+        - {x: httpd, z: started}
+
+-->ansible-playbook multiloops.yml
+
+
+-->vi secrets.yml
+   -->
+---
+- name: loopr playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: install multiple softwares
+      yum:
+        name: "{{item}}"
+        state: latest
+      with_items:
+        - git
+        - tree
+        - httpd
+
+-->ansible-vault create secret.yaml
+   -->need to provide password
+-->Now the file is encrypted
+-->vi secret.yml
+   -->
+   -->we cant read it as its encrypted
+-->if we want to modify the yml give below command 
+-->ansible-vault edit secret.yml
+   -->and enter given password 
+-->if we want want decrypt the password
+-->ansible-vault decrypt secret.yaml
+   -->and give password
+-->vi secret.yml
+   -->
+   -->Now we can view and edit the file
+-->ansible-playbook secret.yml
+-->So while we encrypt the file we cant run ,it until we decrypt it
+
+
+###########################################################################################################################################################################################
+
+                                                                       ----- Ansible DAY-4 -------
+
+###########################################################################################################################################################################################
+
+-->Create a t2.micro instance and name it ansible
+-->Create a t2.micro instance and name it node1 
+-->Create a t2.micro instance and name it node2 
+-->Now log in to ansible instance
+-->sudo su -
+-->yum install ansible -y
+-->yum install git -y
+-->exit
+-->ssh-keygen
+-->cd .ssh
+-->ls
+   -->
+-->cat id_rsa.pub
+   -->
+   -->copy the key
+-->Now log in to nod1 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->Now log in to nod2 instace
+-->cd .ssh
+-->ls
+   -->
+-->vi authorized_keys
+   -->
+   -->paste the public key here
+-->copy the private ip of node1 and node2
+-->Go to the ansible instance
+-->cd ..
+-->sudo vi /etc/ansible/hosts
+   -->
+
+   -->post the private ip's here
+-->Now we are connected to the node1 and node2 instance through ansible
+-->sudo vi /etc/ansible/ansible.cfg
+   -->
+[defaults]
+host_key_checking = False
+
+-->ansible all -m ping
+   -->
+[WARNING]: Platform linux on host 10.0.1.215 is using the discovered Python interpreter at /usr/bin/python3.9, but future installation of another Python interpreter
+could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.15/reference_appendices/interpreter_discovery.html for more information.
+10.0.1.215 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3.9"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+[WARNING]: Platform linux on host 10.0.1.177 is using the discovered Python interpreter at /usr/bin/python3.9, but future installation of another Python interpreter
+could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.15/reference_appendices/interpreter_discovery.html for more information.
+10.0.1.177 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3.9"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+
+-->cd ..
+-->ansible-galaxy init test.yaml
+-->ls
+   -->test.yaml
+-->cd test.yaml
+-->ls
+   -->README.md  defaults  files  handlers  meta  tasks  templates  tests  vars
+-->sudo yum install tree -y
+-->tree
+   -->
+.
+├── README.md
+├── defaults
+│   └── main.yml
+├── files
+├── handlers
+│   └── main.yml
+├── meta
+│   └── main.yml
+├── tasks
+│   └── main.yml
+├── templates
+├── tests
+│   ├── inventory
+│   └── test.yml
+└── vars
+    └── main.yml
+
+-->cd..
+-->git clone https://github.com/Praneeth9630/devops-ansible.git
+-->ls
+   -->devops-ansible  test.yaml
+-->cd devops-ansible
+-->ls
+   --> README.md             include_module                          playbook_condition.yaml          playbook_loop.yaml        project-rolelamp   test
+       first-playbook.yaml  'installtion and adhoc_module_process'   playbook_copymodule_index.yaml   playbook_multiloop.yaml   roles              vault_process
+       groups_inventory      lamp                                    playbook_handlers.yaml           playbook_variable.yaml    tags.yaml
+-->cd roles
+-->ls
+   -->1st_role.yaml  first_role
+-->Now actually we have done it wrong
+-->cd ../..
+-->cd ~
+-->ansible-galaxy init dev
+-->here we should call the dev template with yaml file
+-->ls
+   -->dev  devops-ansible  test.yaml
+-->cd devops-ansible
+-->cd roles
+-->cd first_role
+-->ls
+   -->README.md  defaults  files  handlers  meta  tasks  tests  vars
+-->cd ..
+-->ls
+   -->1st_role.yaml  first_role
+-->Here 1st_role.yaml file is used to call the first_role template
+-->vi 1st_role.yaml
+   -->
+---
+- name: first playbook
+  hosts: all
+  become: yes
+  roles:
+    - first_role
+
+-->cd first_role
+-->cd files
+-->ls
+   -->index.html
+-->cd ..
+-->cd handlers
+-->vi main.yml
+   -->
+---
+- name: Restart web serve
+  service:
+    name: httpd
+    state: restarted
+                        
+-->cd ..
+-->cd tasks
+-->child_copy.yaml  child_install.yaml  child_start.yaml  main.yml
+-->cd ..
+-->cd handlers
+-->vi main.yml
+-->cd ../..
+-->ansible-playbook 1st_role.yaml
+-->Now if we give ip's of node we can access the application
+
+
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+-->
+
+
+
+
+
+
+
+
+
