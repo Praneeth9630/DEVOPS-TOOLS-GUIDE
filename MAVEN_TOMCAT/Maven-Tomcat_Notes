@@ -1,0 +1,544 @@
+###############################################----------MAVEN in LINUX----------###############################################
+What is Maven?
+      Maven is a build automation tool used primarily for Java projects. Maven can also be used to build and manage projects written in C#, Ruby, Scala, and other languages. The Maven  
+      project is hosted by The Apache Software Foundation.
+###############################################
+mavnen advantages 
+      maven is build tool to build the project
+      build means adding dependencies [lib] for the code
+      we can package the project by passing goals
+      project management
+      Maven automate the process 
+      we can generate the reports 
+      maven is written on java programming.
+      its maintainig by Apache Software Foundadtion.
+## build process tools
+
+JAVA	: MAVEN
+Nodejs  : NPM build
+PYTHON	: GRADLE
+.NET	: VS CODE
+C, C#	: MAKE FILE
+
+#######Folder structure######## 
+
+src/main/java -----sorce code required 
+src/main/resourc ------resources files keep in side here 3rd party files
+
+src/test/java ------unit test cases code keep here
+src/test/resource ------resorces file keep heere 3rd party files to testing 
+
+Whenever you create maven project we will get pom.xml
+
+POM.XML FILE:
+POM means Project Object Model.
+pom.xml - Maven configuration file. Controls the build process for the project
+this file will have complete info of the project.
+Ex: Name, Tools, Version, Snapshot, Dependencies.
+Extension is .xml (Extensible Markup Language)
+Note: if we want to pass any goals this file must be on project folder.
+without this file maven will not pass any goals.
+each project we need to have only one pom.xml
+multiple project cant use same pom.xml.
+
+
+pom.xml two entries 
+1. dpendencies 
+2. plugins( configuration plug in )
+
+Dependencies : responsible for downloading the required third party drivers libraries from remote to local 
+
+Plugin: nothing but different configuartions to run project eX : compile 
+
+example maven archetype 
+
+mvn archetype:generate  # to generate and see the sample templates 
+
+mvn archetype:generate -DgroupId=com.apple -DartifactId=java_project -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+
+maven work with two type of repositories 
+
+Maven remote : https://mvnrepository.com/artifact
+
+Mavne Local repo: .M2
+
+############## life cycles ###################
+clean ------project will be cleaned unnessary files 
+validate - validate the project is correct and all necessary information is available
+compile - compile the source code of the project (which converst .java to .class in target foolder)
+test - test the compiled source code using a suitable unit testing framework. These tests should not require the code be packaged or deployed
+package - take the compiled code and package it in its distributable format, such as a JAR.
+verify - run any checks on results of integration tests to ensure quality criteria are met
+install - install the package into the local repository(.m2)
+deploy - done in the build environment, copies the final package to the remote repository for sharing with other developers and projects.
+
+example source codes :
+
+
+
+############################## sample code fro login page ####################
+
+login.jsp
+<html>
+<head>
+<title>Login Form</title>
+</head>
+<body>
+<h3> Login here </h3>
+<form action="user_login" method="post">
+<table style="width: 20%">
+                 <tr>
+                 <td>UserName</td>
+                                    <td><input type="text" name="username" /></td>
+                         </tr>
+                                    <tr>
+                                    <td>Password</td>
+                                    <td><input type="password" name="password" /></td>
+                           </tr>
+                 </table>
+                 <input type="submit" value="Login" /></form>
+</body>
+</html>
+
+###############sample code for hello world ################################
+
+<html>
+<body>
+<h2>Hello World!</h2>
+</body>
+</html>
+
+############################################################################################################################################################################################
+
+1)Create a t2.medium instance and login into it
+-->sudo su -
+-->yum install maven -y
+-->mvn --version
+-->yum install git -y
+-->git --version
+-->yum install tree
+-->git clone https://github.com/CloudTechDevOps/Docker_web.git
+-->ls
+   -->sample-maven-project
+-->cd sample-maven-project
+-->ls
+   -->README.md  pom.xml  src
+-->tree
+   -->     
+      ├── README.md
+      ├── pom.xml
+      └── src
+          ├── main
+          │   └── java
+          │       └── hello
+          │           ├── Greeter.java
+          │           └── HelloWorld.java
+          └── test
+              └── java
+                  └── hello
+                      └── GreeterTest.java
+
+
+-->mvn clean
+   -->BUILD SUCCESS
+   -->clean ------project will be cleaned unnessary files
+-->mvn compile
+   -->build succesful
+   -->compile - compile the source code of the project (which converst .java to .class in target foolder).
+   -->that is it first creates a target folder and stores the generated .class file into it.
+
+-->tree
+   -->├── README.md
+      ├── pom.xml
+      ├── src
+      │   ├── main
+      │   │   └── java
+      │   │       └── hello
+      │   │           ├── Greeter.java
+      │   │           └── HelloWorld.java
+      │   └── test
+      │       └── java
+      │           └── hello
+      │               └── GreeterTest.java
+      └── target
+          ├── classes
+          │   └── hello
+          │       ├── Greeter.class
+          │       └── HelloWorld.class
+          ├── generated-sources
+          │   └── annotations
+          └── maven-status
+              └── maven-compiler-plugin
+                  └── compile
+                      └── default-compile
+                          ├── createdFiles.lst
+                          └── inputFiles.lst
+
+
+
+-->cd ~
+-->ls -la
+   -->total 20
+      dr-xr-x---.  5 root root 142 Mar 15 06:14 .
+      dr-xr-xr-x. 18 root root 237 Mar 13 01:54 ..
+      -rw-r--r--.  1 root root  18 Feb  2  2023 .bash_logout
+      -rw-r--r--.  1 root root 141 Feb  2  2023 .bash_profile
+      -rw-r--r--.  1 root root 429 Feb  2  2023 .bashrc
+      -rw-r--r--.  1 root root 100 Feb  2  2023 .cshrc
+      drwxr-xr-x.  3 root root  24 Mar 15 05:50 .m2
+      drwx------.  2 root root  29 Mar 15 05:18 .ssh
+      -rw-r--r--.  1 root root 129 Feb  2  2023 .tcshrc
+      drwxr-xr-x.  5 root root  75 Mar 15 06:18 sample-maven-project
+
+   --> here we can see the .m2 file which will be created when installing maven.
+   -->if we download anything in remote repository the pom.xml will store it in local repository(.m2 file)
+
+-->mvn test
+   -->BUILD SUCCESS
+   -->test - test the compiled source code using a suitable unit testing framework. These tests should not require the code be packaged or deployed
+   -->it means your code is fine there are no issues with it.
+-->mvn package
+   -->package - take the compiled code and package it in its distributable format, such as a JAR format, into target folder.
+-->tree
+   --> ├── README.md
+├── dependency-reduced-pom.xml
+├── pom.xml
+├── src
+│   ├── main
+│   │   └── java
+│   │       └── hello
+│   │           ├── Greeter.java
+│   │           └── HelloWorld.java
+│   └── test
+│       └── java
+│           └── hello
+│               └── GreeterTest.java
+└── target
+    ├── classes
+    │   └── hello
+    │       ├── Greeter.class
+    │       └── HelloWorld.class
+    ├── generated-sources
+    │   └── annotations
+    ├── generated-test-sources
+    │   └── test-annotations
+    ├── gs-maven-0.1.0.jar
+    ├── maven-archiver
+    │   └── pom.properties
+    ├── maven-status
+    │   └── maven-compiler-plugin
+    │       ├── compile
+    │       │   └── default-compile
+    │       │       ├── createdFiles.lst
+    │       │       └── inputFiles.lst
+    │       └── testCompile
+    │           └── default-testCompile
+    │               ├── createdFiles.lst
+    │               └── inputFiles.lst
+    ├── original-gs-maven-0.1.0.jar
+    ├── surefire-reports
+    │   ├── TEST-hello.GreeterTest.xml
+    │   └── hello.GreeterTest.txt
+    └── test-classes
+        └── hello
+            └── GreeterTest.class
+
+
+-->mvn install
+   -->install - install the package into the local repository(.m2)
+   -->the war file will be stored in .m2
+-->cd ..
+-->cd .m2
+-->cd repository/org/springframework/gs-maven/0.1.0
+-->ls
+   -->_remote.repositories  gs-maven-0.1.0.jar  gs-maven-0.1.0.pom
+   --> here we can see the jar file in local repository(gs-maven-0.1.0.jar).
+
+
+
+2)
+-->git clone https://github.com/CloudTechDevOps/project-1-maven-jenkins-CICD-docker-eks-.git
+-->ls
+   -->project-1-maven-jenkins-CICD-docker-eks-
+-->cd project-1-maven-jenkins-CICD-docker-eks-
+-->ls
+   -->Dockerfile  README.md  pom.xml  regapp-deploy.yml  server  webapp
+-->cd webapp
+-->tree
+   -->├── pom.xml
+      └── src
+          └── main
+              └── webapp
+                  ├── WEB-INF
+                  │   └── web.xml
+                  └── index.jsp
+
+-->cd ..
+-->mvn clean
+   -->BUILDSUCCESS
+-->mvn install
+  -->BUILDSUCCESS
+  -->here giving install cmd automatically runs compile, test, package inside of it.
+-->tree
+   -->├── Dockerfile
+├── README.md
+├── pom.xml
+├── regapp-deploy.yml
+├── server
+│   ├── pom.xml
+│   ├── src
+│   │   ├── main
+│   │   │   └── java
+│   │   │       └── com
+│   │   │           └── example
+│   │   │               └── Greeter.java
+│   │   ├── site
+│   │   │   └── apt
+│   │   │       └── index.apt
+│   │   └── test
+│   │       └── java
+│   │           └── com
+│   │               └── example
+│   │                   └── TestGreeter.java
+│   └── target
+│       ├── classes
+│       │   └── com
+│       │       └── example
+│       │           └── Greeter.class
+│       ├── generated-sources
+│       │   ├── annotations
+│       │   └── test-annotations
+│       ├── maven-archiver
+│       │   └── pom.properties
+│       ├── server.jar
+│       ├── surefire
+│       ├── surefire-reports
+│       │   ├── TEST-com.example.TestGreeter.xml
+│       │   └── com.example.TestGreeter.txt
+│       └── test-classes
+│           └── com
+│               └── example
+│                   └── TestGreeter.class
+└── webapp
+    ├── pom.xml
+    ├── src
+    │   └── main
+    │       └── webapp
+    │           ├── WEB-INF
+    │           │   └── web.xml
+    │           └── index.jsp
+    └── target
+        ├── maven-archiver
+        │   └── pom.properties
+        ├── surefire
+        ├── webapp
+        │   ├── META-INF
+        │   ├── WEB-INF
+        │   │   ├── classes
+        │   │   └── web.xml
+        │   └── index.jsp
+        └── webapp.war
+
+-->here we can see we have generated war file in target and local repository.
+
+
+###############################################----------TOMCAT in LINUX----------###############################################
+
+
+-->What is Tomcat?
+    -->Tomcat is an open-source web server and servlet. The Apache Software Foundation has developed it. It is used widely for hosting Java-based applications on the web. It is built on        Java technologies and implements the Java Servlet and JavaServer Pages (JSP)
+    -->It is a web application server
+    -->We can host all java based application in tomcat
+    -->application hosts on tomcat "webapps"
+    -->tomcat works on java language
+    -->We can start tomcat serevr by using startup.sh file in /bin
+       -->In  /root/tomcat/bin we find startup.sh and shutdown.sh to start or shutdown we give cmd sh startup.sh or sh shutdown.sh
+    -->We can change the port no in server.xml file in the path /root/tomcat/conf/server.xml
+    -->war file should be placed in -------------/root/tomcat/webapps
+-->TYPES OF ARTIFACTS:
+     1. JAR: JAVA ARCHIVE 		: Backend 
+     2. WAR: WEB ARCHIVE		: Frontend + backend
+     3. EAR: ENTERPRISE ARCHIVE	        : jar + war
+
+
+
+
+-->sudo su -
+-->wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.86/bin/apache-tomcat-9.0.86.tar.gz
+   --> cmd to install tomcat from web
+-->tar -xvzf <apachetomcat-tarfile>
+   --> cmd to untar the tar file
+-->ls
+   -->apache-tomcat-9.0.86  apache-tomcat-9.0.86.tar.gz
+-->rm -rf apache-tomcat-9.0.86.tar.gz
+   --> to delete the tar file
+-->mv apache-tomcat-9.0.86 tomcat
+   -->to change the name to tomcat
+-->ls
+   -->tomcat
+-->cd /tomcat/bin
+-->sh startup.sh
+   -->Using CATALINA_BASE:   /root/tomcat
+      Using CATALINA_HOME:   /root/tomcat
+      Using CATALINA_TMPDIR: /root/tomcat/temp
+      Using JRE_HOME:        /usr
+      Using CLASSPATH:       /root/tomcat/bin/bootstrap.jar:/root/tomcat/bin/tomcat-juli.jar
+      Using CATALINA_OPTS:   
+      Tomcat started.
+-->Now we can access the tomcat server by typing in google <the public_ip of instance>:8080
+   As the tomcat web page opens we see three option right side (Server Status, Management Apps, Host Manager)
+   Now we need to run the goals to generate Jar or War files and place them in webapps path of tomcat.
+-->cd ~
+-->yum install git -y
+-->git --version
+-->yum install tree
+-->git clone https://github.com/CloudTechDevOps/project-1-maven-jenkins-CICD-docker-eks-.git
+-->ls
+   -->project-1-maven-jenkins-CICD-docker-eks-  tomcat
+-->cd project-1-maven-jenkins-CICD-docker-eks-
+-->ls
+   -->Dockerfile  README.md  pom.xml  regapp-deploy.yml  server  webapp
+-->rm -rf Dockerfile  README.md regapp-deploy.yml
+   -->We will remove the unnecessary files
+-->ls
+   -->pom.xml  server  webapp
+-->mvn install
+  -->BUILDSUCCESS
+  -->here giving install cmd automatically runs compile, test, package inside of it.
+-->tree
+   -->
+├── pom.xml
+├── server
+│   ├── pom.xml
+│   ├── src
+│   │   ├── main
+│   │   │   └── java
+│   │   │       └── com
+│   │   │           └── example
+│   │   │               └── Greeter.java
+│   │   ├── site
+│   │   │   └── apt
+│   │   │       └── index.apt
+│   │   └── test
+│   │       └── java
+│   │           └── com
+│   │               └── example
+│   │                   └── TestGreeter.java
+│   └── target
+│       ├── classes
+│       │   └── com
+│       │       └── example
+│       │           └── Greeter.class
+│       ├── generated-sources
+│       │   ├── annotations
+│       │   └── test-annotations
+│       ├── maven-archiver
+│       │   └── pom.properties
+│       ├── server.jar
+│       ├── surefire
+│       ├── surefire-reports
+│       │   ├── TEST-com.example.TestGreeter.xml
+│       │   └── com.example.TestGreeter.txt
+│       └── test-classes
+│           └── com
+│               └── example
+│                   └── TestGreeter.class
+└── webapp
+    ├── pom.xml
+    ├─    src
+    │   └── main
+    │       └── webapp
+    │           ├── WEB-INF
+    │           │   └── web.xml
+    │           └── index.jsp
+    └── target
+        ├── maven-archiver
+        │   └── pom.properties
+        ├── surefire
+        ├── webapp
+        │   ├── META-INF
+        │   ├── WEB-INF
+        │   │   ├── classes
+        │   │   └── web.xml
+        │   └── index.jsp
+        └── webapp.war
+
+
+-->Now go back to tomcat webpage and if we host in webapps we see it in manager apps, if we click on manager apps we see our webapp application(the UI process)
+-->When we click on manager apps it will show
+   -->403 Access Denied
+      You are not authorized to view this page.
+      By default the Manager is only accessible from a browser running on the same machine as Tomcat. If you wish to modify this restriction, you'll need to edit the Manager's context.xml    
+      file.
+   --> So now we should access the context.xml file and edit it.
+
+-->cd ..
+-->cd tomcat
+-->ls
+   -->
+-->find / -name context.xml
+   -->/root/tomcat/conf/context.xml
+      /root/tomcat/webapps/docs/META-INF/context.xml
+      /root/tomcat/webapps/examples/META-INF/context.xml
+      /root/tomcat/webapps/host-manager/META-INF/context.xml
+      /root/tomcat/webapps/manager/META-INF/context.xml
+
+-->vi /root/tomcat/webapps/host-manager/META-INF/context.xml
+   -->add comment it below two line <!--     -->
+      ex: <!-- <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+                           allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" /> -->
+
+-->vi /root/tomcat/webapps/manager/META-INF/context.xml
+   -->add comment it below two line <!--     -->
+       ex:   <!-- <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+                        allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />-->
+
+-->Now if we access the manager apps in tomcat webpage it asks us username and password, which we dont know so now we have change the user credentials.
+-->vi tomcat/conf/tomcat-user.xml
+   -->In the file we need to update this content
+        <role rolename="manager-gui"/>
+        <role rolename="manager-script"/>
+        <role rolename="manager-jmx"/>
+        <role rolename="manager-status"/>
+        <user username="admin" password="admin" roles="manager-gui, manager-script, manager-jmx, manager-status"/>
+        <user username="deployer" password="deployer" roles="manager-script"/>
+        <user username="tomcat" password="s3cret" roles="manager-gui"/>
+
+-->Now if we go to the tomcat web page and click on manager apps and give user and passwd as admin and admin we are able to access it.
+-->Now the last part is to place the war file in the project directory to the tomcat webapps
+-->cd ~
+-->cd project-1-maven-jenkins-CICD-docker-eks-
+-->cd webapp
+-->cd target
+-->ls
+   -->maven-archiver  surefire  webapp  webapp.war
+-->pwd
+   -->/root/project-1-maven-jenkins-CICD-docker-eks-/webapp/target
+-->cd ~
+-->cd tomcat
+-->ls
+   -->BUILDING.txt  CONTRIBUTING.md  LICENSE  NOTICE  README.md  RELEASE-NOTES  RUNNING.txt  bin  conf  lib  logs  temp  webapps  work
+-->cd webapps
+-->ls
+   -->ROOT  docs  examples  host-manager  manager
+-->cd ~
+-->mv /root/project-1-maven-jenkins-CICD-docker-eks-/webapp/target/webapp.war   tomcat/webapps
+-->cd tomcat
+-->cd webapps
+-->ls
+   -->ROOT  docs  examples  host-manager  manager  webapp  webapp.war
+   -->Now the we moved the war file to webapps in tomcat.
+   -->Now open tomcat webpage->manager apps->inside we can see webapp.
+-->Now to check the application result we open google and type <public_ip_of_instance>:8080/webapp which will redirect the page to the application.
+-->Now if we want to change the running port no of tomcat.
+-->cd ..
+-->cd conf
+-->vi server.xml
+   --> change <Connector port="8080" to <Connector port="8082"
+-->cd ..
+-->cd bin
+-->sh shutdown.sh
+-->sh startup.sh
+-->Now if you access the tomcat webpage it will not work so in the url chnage the port no to 8082, now it will work.
+### Remember if you are unable to acces the server check if you have given Security group allowance to 8082.
+
